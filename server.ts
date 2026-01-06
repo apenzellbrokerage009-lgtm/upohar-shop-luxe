@@ -1,14 +1,30 @@
 
 import express from 'express';
 import { AppState, Order, Product, Expense } from './types';
-// Added INITIAL_DISCOUNT to imports
 import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES, INITIAL_DISCOUNT } from './constants';
 import { GoogleGenAI } from "@google/genai";
+
+/**
+ * MONGODB INTEGRATION (Instructions):
+ * 1. To use actual MongoDB, uncomment the mongoose code below.
+ * 2. Set MONGODB_URI in your environment variables.
+ * 3. The server currently uses an in-memory dbState for the demo.
+ */
+/*
+import mongoose from 'mongoose';
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/upoharluxe";
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ MongoDB Connection Error:", err));
+
+const StateSchema = new mongoose.Schema({ data: Object }, { timestamps: true });
+const StateModel = mongoose.model('State', StateSchema);
+*/
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json() as any);
+app.use(express.json({ limit: '50mb' }) as any);
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -21,7 +37,6 @@ let dbState: AppState = {
   employees: [],
   adminUsers: [{ id: 'master-1', name: 'Master Admin', email: 'admin@upoharluxe.com', role: 'admin', password: 'admin' }],
   customers: [],
-  // Fix: Added missing chatSessions property to match AppState interface
   chatSessions: [],
   attendance: [],
   payroll: [],
@@ -35,14 +50,16 @@ let dbState: AppState = {
   tracking: { fbPixelId: '', fbAccessToken: '', fbTestCode: '', gtmId: '', gtmServerUrl: '', tiktokId: '', isEnabled: false },
   steadfast: { apiKey: '', secretKey: '', isEnabled: false },
   pathao: { clientId: '', clientSecret: '', username: '', password: '', storeId: '', isEnabled: false },
-  // Added missing discount property
   discount: INITIAL_DISCOUNT,
   customPages: [],
   navMenus: [],
   customLandings: []
 };
 
-app.get('/api/state', (req, res) => res.json(dbState));
+app.get('/api/state', (req, res) => {
+  res.json(dbState);
+});
+
 app.post('/api/state', (req, res) => {
   dbState = { ...dbState, ...req.body };
   res.json({ success: true });
@@ -91,4 +108,4 @@ app.post('/api/courier/dispatch', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Upohar Luxe Node.js Backend flowing at http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Upohar Luxe Backend (TS/Node) at http://localhost:${PORT}`));

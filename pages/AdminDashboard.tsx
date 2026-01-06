@@ -216,23 +216,24 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
     }
   };
 
+  // ROBUST FIX FOR LEAD CONFIRMATION
   const handleConfirmLead = (lead: IncompleteOrder) => {
     const address = lead.shippingAddress || prompt("Confirm or Enter shipping address for this recovered order:");
     if (address === null) return;
     
-    // Robust item mapping
+    // Ensure all items are correctly mapped with product details
     const updatedItems = lead.items.map(it => {
       const product = state.products.find(p => p.id === it.productId);
       return {
         productId: it.productId,
         productName: it.productName || product?.name || 'Recovered Asset',
-        quantity: it.quantity || 1,
-        price: it.price || product?.price || 0
+        quantity: Number(it.quantity || 1),
+        price: Number(it.price || product?.price || 0)
       };
     });
 
     const subtotal = updatedItems.reduce((acc, it) => acc + (it.price * it.quantity), 0);
-    const deliveryCharge = 60; // Standard 
+    const deliveryCharge = 60; 
     
     const newOrderId = lead.id.startsWith('DRAFT-') 
       ? lead.id.replace('DRAFT-', '') 
@@ -249,16 +250,23 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       status: 'processing',
       createdAt: new Date().toISOString(),
       shippingAddress: address || 'No Address Provided',
-      ipAddress: 'Lead Recovery Engine'
+      ipAddress: 'Lead Recovery Terminal'
     };
 
-    setState(prev => ({
-      ...prev,
-      orders: [newOrder, ...prev.orders],
-      incompleteOrders: prev.incompleteOrders.filter(l => l.id !== lead.id)
-    }));
+    setState(prev => {
+      const exists = prev.orders.some(o => o.id === newOrder.id);
+      if (exists) {
+        alert("This lead has already been converted.");
+        return prev;
+      }
+      return {
+        ...prev,
+        orders: [newOrder, ...prev.orders],
+        incompleteOrders: prev.incompleteOrders.filter(l => l.id !== lead.id)
+      };
+    });
     
-    alert(`Success! Lead converted to Order #${newOrderId}`);
+    alert(`Successfully converted lead to Order #${newOrderId}`);
   };
 
   const handlePrintInvoice = () => {
