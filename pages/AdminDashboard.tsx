@@ -5,7 +5,7 @@ import {
   Calculator, ShoppingBag, UserCheck, Package, FolderTree, 
   Wallet, Users, Palette, PanelTop, Layout, Settings, 
   Clock, Receipt, AlertCircle, TrendingUp, Printer, ShieldAlert, Cpu, CheckCircle2, XCircle, Edit, FileText, Download, Save, PhoneCall, CheckCircle, Ban, Truck, Search, Filter, Eye, Globe, Trash2, Send, ExternalLink,
-  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks, Heart, Contact, UserCog, Mail, Navigation, Star
+  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks, Heart, Contact, UserCog, Mail, Navigation, Star, Fingerprint, LocateFixed
 } from 'lucide-react';
 import { checkCustomerReliability } from '../courierService';
 import { dispatchToSteadfast, dispatchToPathao } from '../courierIntegrationService';
@@ -26,6 +26,7 @@ import MenuStudio from '../components/admin/MenuStudio';
 import PagesModule from '../components/admin/PagesModule';
 import CustomLandingBuilder from '../components/admin/CustomLandingBuilder';
 import PackagingManifest from '../components/admin/PackagingManifest';
+import DeliveryDispatch from '../components/admin/DeliveryDispatch';
 
 const statusMap: Record<string, { label: string, color: string, ring: string }> = {
   pending: { label: 'Pending', color: 'text-amber-600', ring: 'ring-amber-100' },
@@ -54,12 +55,11 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
   const [isCheckingCourier, setIsCheckingCourier] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
-  const [printMode, setPrintMode] = useState<'invoice' | 'slip'>('invoice');
+  const [printMode, setPrintMode] = useState<'invoice' | 'manifest'>('invoice');
 
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
-  // States for Leads Courier Scores
   const [leadScores, setLeadScores] = useState<Record<string, CourierStats>>({});
   const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
 
@@ -204,9 +204,9 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
 
   const handleConfirmLead = (lead: IncompleteOrder) => {
     const address = lead.shippingAddress || prompt("Enter shipping address for this order:");
-    if (address === null) return; // Cancelled prompt
+    if (address === null) return;
     
-    const deliveryCharge = 60; // Default or calculate based on address
+    const deliveryCharge = 60;
     const subtotal = lead.items.reduce((acc, it) => acc + (it.price * it.quantity), 0);
     
     const newOrder: Order = {
@@ -231,9 +231,11 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
     alert("Lead confirmed and converted to Order!");
   };
 
-  const handlePrint = (mode: 'invoice' | 'slip') => {
-    setPrintMode(mode);
-    setTimeout(() => window.print(), 300);
+  const handlePrintInvoice = () => {
+    setPrintMode('invoice');
+    setTimeout(() => {
+      window.print();
+    }, 500);
   };
 
   const handleDispatch = async (courier: 'steadfast' | 'pathao') => {
@@ -302,6 +304,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
         { id: 'pos', label: 'POS Terminal', icon: Calculator, roles: ['admin'] },
         { id: 'orders', label: 'Order Stream', icon: ShoppingBag, count: state.orders.length },
         { id: 'leads', label: 'Lead Recovery', icon: UserCheck, count: state.incompleteOrders.length },
+        { id: 'dispatch', label: 'Delivery Dispatch', icon: Truck, count: state.orders.filter(o => o.status === 'processing').length },
         { id: 'courier-checker', label: 'Courier Checker', icon: SearchCode },
       ]},
       { label: 'Collective', roles: ['admin'], items: [
@@ -332,7 +335,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       ...g,
       items: g.items.filter(i => !i.roles || i.roles.includes(userRole))
     }));
-  }, [userRole, state.orders.length, state.incompleteOrders.length, unifiedCustomers.length]);
+  }, [userRole, state.orders.length, state.incompleteOrders.length, unifiedCustomers.length, state.orders.filter(o => o.status === 'processing').length]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-inter selection:bg-rose-100 selection:text-rose-900">
@@ -408,6 +411,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
             </div>
           )}
 
+          {activeTab === 'dispatch' && <DeliveryDispatch state={state} setState={setState} />}
           {activeTab === 'leads' && (
              <div className="space-y-10 animate-in fade-in duration-500">
                 <div className="flex justify-between items-center">
@@ -630,7 +634,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                    </table>
                 </div>
 
-                {/* RESTORED BULK ACTION BAR */}
+                {/* BULK ACTION BAR */}
                 {selectedOrderIds.length > 0 && (
                   <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-slate-950/95 backdrop-blur-2xl px-10 py-6 rounded-[3rem] border border-white/10 shadow-2xl flex items-center gap-10 animate-in slide-in-from-bottom-10">
                     <div className="flex items-center gap-4 border-r border-white/10 pr-10">
@@ -651,14 +655,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                          className="px-6 py-3 bg-rose-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2 disabled:opacity-30"
                        >
                          {isBulkProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Send className="w-3 h-3"/>} Bulk Steadfast
-                       </button>
-                       
-                       <button 
-                         disabled={isBulkProcessing || !state.pathao.isEnabled} 
-                         onClick={() => handleBulkDispatch('pathao')} 
-                         className="px-6 py-3 bg-orange-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all flex items-center gap-2 disabled:opacity-30"
-                       >
-                         {isBulkProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Send className="w-3 h-3"/>} Bulk Pathao
                        </button>
                     </div>
 
@@ -686,51 +682,77 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
         </div>
       </main>
 
-      {/* CUSTOMER EDIT MODAL */}
-      {editingCustomer && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-           <div className="absolute inset-0 bg-slate-950/98 backdrop-blur-3xl" onClick={() => setEditingCustomer(null)}></div>
-           <div className="relative bg-white w-full max-w-xl rounded-[4rem] p-12 shadow-2xl space-y-8 animate-in zoom-in duration-300">
-              <div className="flex justify-between items-center">
-                 <h3 className="text-2xl font-black uppercase text-slate-900 tracking-tighter">Modify Entity Profile</h3>
-                 <button onClick={() => setEditingCustomer(null)} className="p-3 bg-slate-50 text-slate-400 hover:text-rose-600 rounded-full transition-all"><XCircle className="w-6 h-6"/></button>
-              </div>
-              <div className="space-y-5">
-                 <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Member Legal Name</label>
-                    <div className="relative">
-                       <User className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                       <input className="w-full pl-14 pr-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl font-black text-sm outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all" value={editingCustomer.name} onChange={e => setEditingCustomer({...editingCustomer, name: e.target.value})} />
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Communication Email</label>
-                    <div className="relative">
-                       <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                       <input className="w-full pl-14 pr-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl font-black text-sm outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all" value={editingCustomer.email || ''} onChange={e => setEditingCustomer({...editingCustomer, email: e.target.value})} />
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Primary Mobile Number</label>
-                    <div className="relative">
-                       <PhoneCall className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                       <input className="w-full pl-14 pr-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl font-black text-sm outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all" value={editingCustomer.phone || ''} onChange={e => setEditingCustomer({...editingCustomer, phone: e.target.value})} />
-                    </div>
-                 </div>
-              </div>
-              <button onClick={handleSaveCustomer} className="w-full py-6 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-[0.3em] hover:bg-rose-600 transition-all shadow-2xl flex items-center justify-center gap-3">
-                 <Check className="w-5 h-5" /> Commit Modifications
-              </button>
-           </div>
-        </div>
-      )}
+      {/* PRINT CONTAINERS (Hidden in UI, Shown in @media print) */}
+      <div className="hidden print:block absolute inset-0 bg-white" id="master-print-target">
+         {selectedOrder && printMode === 'invoice' && (
+             <div className="p-20 w-full text-slate-900 font-sans">
+                <div className="flex justify-between items-start mb-24 pb-12 border-b-8 border-slate-900">
+                  <div>
+                    <h1 className="text-5xl font-black italic tracking-tighter text-slate-950 uppercase">Upohar Luxe</h1>
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-rose-600 mt-4">High-End Gifting Infrastructure</p>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-6xl font-black text-slate-950 tracking-tighter">OFFICIAL INVOICE</h2>
+                    <p className="text-sm font-black mt-2 uppercase text-slate-400 tracking-widest">Master ID: #{selectedOrder.id}</p>
+                  </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-24 mb-24 text-slate-900 font-bold uppercase">
+                  <div>
+                    <p className="text-[11px] font-black text-slate-400 mb-4 tracking-widest">Constituent Target</p>
+                    <p className="text-3xl font-black">{selectedOrder.customerName}</p>
+                    <p className="text-xl font-bold">{selectedOrder.customerPhone}</p>
+                    <p className="mt-6 text-base italic leading-relaxed">{selectedOrder.shippingAddress}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] font-black text-slate-400 mb-4 tracking-widest">Issuance Node</p>
+                    <p className="text-xl font-black">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xl font-black">{new Date(selectedOrder.createdAt).toLocaleTimeString()}</p>
+                  </div>
+                </div>
+
+                <table className="w-full mb-24 border-collapse">
+                  <thead>
+                    <tr className="border-b-4 border-slate-950 text-[10px] font-black uppercase tracking-widest">
+                      <th className="py-8 text-left uppercase">Asset Classification</th>
+                      <th className="py-8 text-center uppercase">Quantity</th>
+                      <th className="py-8 text-right uppercase">Unit Liability</th>
+                      <th className="py-8 text-right uppercase">Total Liability</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y-2 divide-slate-100">
+                    {selectedOrder.items.map((item, idx) => (
+                      <tr key={idx} className="font-bold uppercase">
+                        <td className="py-10 text-lg">{state.products.find(p => p.id === item.productId)?.name || 'Premium Asset'}</td>
+                        <td className="py-10 text-center text-xl">{item.quantity}</td>
+                        <td className="py-10 text-right">{item.price.toLocaleString()}৳</td>
+                        <td className="py-10 text-right text-xl font-black">{(item.price * item.quantity).toLocaleString()}৳</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="flex justify-end pt-12 border-t-4 border-slate-950">
+                  <div className="text-right">
+                    <p className="text-xs font-black uppercase text-slate-400 tracking-[0.5em] mb-4">Final Settlement</p>
+                    <p className="text-7xl font-black tracking-tighter">{selectedOrder.total.toLocaleString()}৳</p>
+                  </div>
+                </div>
+
+                <div className="mt-48 text-center border-t-2 border-slate-100 pt-12">
+                   <p className="text-[9px] font-black uppercase tracking-[0.8em] text-slate-300 italic">Authenticity Guaranteed by Upohar Luxe Matrix</p>
+                </div>
+             </div>
+         )}
+      </div>
+
+      {/* MODALS (Order Card) */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-0 md:p-8 overflow-hidden">
-          <div className="absolute inset-0 bg-slate-950/98 backdrop-blur-3xl animate-in fade-in duration-500 no-print" onClick={() => setSelectedOrder(null)}></div>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-0 md:p-8 overflow-hidden no-print">
+          <div className="absolute inset-0 bg-slate-950/98 backdrop-blur-3xl animate-in fade-in duration-500" onClick={() => setSelectedOrder(null)}></div>
           <div className="relative bg-white w-full max-w-7xl h-full md:h-auto md:max-h-[95vh] rounded-none md:rounded-[4.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-in zoom-in slide-in-from-bottom duration-500 flex flex-col border border-white/10">
              
-             <div className="flex justify-between items-center px-12 md:px-16 py-8 md:py-12 border-b border-slate-50 bg-white/50 backdrop-blur-md sticky top-0 z-[10] no-print">
+             <div className="flex justify-between items-center px-12 md:px-16 py-8 md:py-12 border-b border-slate-50 bg-white/50 backdrop-blur-md sticky top-0 z-[10]">
                 <div className="flex items-center gap-4 md:gap-8">
                    <div className="w-12 h-12 md:w-16 md:h-16 bg-rose-600 text-white rounded-2xl md:rounded-3xl flex items-center justify-center text-2xl md:text-3xl font-black italic shadow-2xl shadow-rose-600/30">U</div>
                    <div>
@@ -743,12 +765,12 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                    </div>
                 </div>
                 <div className="flex gap-2 md:gap-4">
-                   <button onClick={() => handlePrint('invoice')} className="px-4 md:px-8 py-3 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest flex items-center gap-2 md:gap-3 hover:bg-emerald-700 transition-all shadow-lg active:scale-95"><Printer className="w-4 h-4 md:w-5 md:h-5"/> <span className="hidden sm:inline">Print Invoice</span></button>
+                   <button onClick={handlePrintInvoice} className="px-4 md:px-8 py-3 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest flex items-center gap-2 md:gap-3 hover:bg-emerald-700 transition-all shadow-lg active:scale-95"><Printer className="w-4 h-4 md:w-5 md:h-5"/> <span className="hidden sm:inline">Print Invoice</span></button>
                    <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 md:w-14 md:h-14 bg-rose-50 rounded-xl md:rounded-2xl text-rose-600 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center"><XCircle className="w-5 h-5 md:w-6 md:h-6"/></button>
                 </div>
              </div>
 
-             <div className="flex-grow overflow-y-auto scrollbar-hide no-print p-16">
+             <div className="flex-grow overflow-y-auto scrollbar-hide p-12 md:p-16">
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
                   <div className="space-y-12">
                      <div className="space-y-6">
@@ -757,47 +779,67 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                            <div className="group space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Recipient Identity</label><input disabled={userRole === 'packaging'} className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none" value={selectedOrder.customerName} onChange={e => handleUpdateOrder({ customerName: e.target.value })} /></div>
                            <div className="group space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Digital Comms (Phone)</label><div className="flex gap-3"><input disabled={userRole === 'packaging'} className="flex-grow px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none" value={selectedOrder.customerPhone} onChange={e => handleUpdateOrder({ customerPhone: e.target.value })} /><button onClick={() => handleCourierCheck(selectedOrder.customerPhone)} className="w-16 bg-slate-950 text-white rounded-[1.5rem] flex items-center justify-center transition-all hover:bg-rose-600">{isCheckingCourier ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Search className="w-4 h-4"/>}</button></div></div>
                            <div className="group space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Shipping Destination</label><textarea disabled={userRole === 'packaging'} className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none h-40 resize-none" value={selectedOrder.shippingAddress} onChange={e => handleUpdateOrder({ shippingAddress: e.target.value })} /></div>
-                           
-                           {/* CUSTOMER TECH METADATA BLOCK */}
-                           <div className="pt-6 border-t border-slate-50 space-y-4">
-                              <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Customer Technical Metadata</p>
-                              <div className="grid grid-cols-1 gap-3">
-                                 <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <Globe className="w-4 h-4 text-blue-500" />
-                                    <div>
-                                       <p className="text-[8px] font-black text-slate-400 uppercase">IP Address Trace</p>
-                                       <p className="text-xs font-mono font-bold text-slate-600">{selectedOrder.ipAddress || 'Not Collected'}</p>
-                                    </div>
-                                 </div>
-                                 {selectedOrder.location && (
-                                    <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                       <Navigation className="w-4 h-4 text-emerald-500" />
-                                       <div>
-                                          <p className="text-[8px] font-black text-slate-400 uppercase">Geolocation Node</p>
-                                          <p className="text-xs font-mono font-bold text-slate-600">{selectedOrder.location.lat.toFixed(4)}, {selectedOrder.location.lng.toFixed(4)}</p>
-                                       </div>
-                                       <a 
-                                          href={`https://www.google.com/maps?q=${selectedOrder.location.lat},${selectedOrder.location.lng}`} 
-                                          target="_blank" 
-                                          rel="noreferrer"
-                                          className="ml-auto p-2 bg-white rounded-lg text-slate-400 hover:text-rose-600 shadow-sm transition-all"
-                                       >
-                                          <ExternalLink className="w-3 h-3" />
-                                       </a>
-                                    </div>
-                                 )}
+                        </div>
+                     </div>
+
+                     {/* DIGITAL METADATA SECTION */}
+                     <div className="space-y-6 pt-6 border-t border-slate-50">
+                        <div className="flex items-center gap-3"><Fingerprint className="w-5 h-5 text-rose-600" /><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Digital Metadata</h4></div>
+                        <div className="space-y-4">
+                           <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center justify-between">
+                              <div>
+                                 <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Origin IP Node</p>
+                                 <p className="text-sm font-black text-slate-900">{selectedOrder.ipAddress || 'Not Captured'}</p>
                               </div>
+                              <Globe className="w-6 h-6 text-slate-200" />
                            </div>
+                           {selectedOrder.location && (
+                              <a 
+                                href={`https://www.google.com/maps?q=${selectedOrder.location.lat},${selectedOrder.location.lng}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="p-6 bg-emerald-50 rounded-[2rem] border border-emerald-100 flex items-center justify-between hover:bg-emerald-100 transition-all group"
+                              >
+                                 <div>
+                                    <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Geo-Location Terminal</p>
+                                    <p className="text-sm font-black text-emerald-900">{selectedOrder.location.lat.toFixed(4)}, {selectedOrder.location.lng.toFixed(4)}</p>
+                                 </div>
+                                 <LocateFixed className="w-6 h-6 text-emerald-600 group-hover:scale-110 transition-transform" />
+                              </a>
+                           )}
                         </div>
                      </div>
                   </div>
+
                   <div className="space-y-12 lg:border-x lg:border-slate-50 lg:px-16">
                      <div className="space-y-6">
-                        <div className="flex items-center gap-3"><Hash className="w-5 h-5 text-rose-600" /><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Asset Breakdown</h4></div>
-                        <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group"><div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform"><Package className="w-24 h-24" /></div><div className="space-y-4 relative z-10">{selectedOrder.items.map((item, idx) => (<div key={idx} className="flex justify-between items-center text-xs font-black pb-4 border-b border-white/5 last:border-0 last:pb-0"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-[10px]">{item.quantity}</div><span className="uppercase text-white/90 truncate max-w-[150px]">{state.products.find(p => p.id === item.productId)?.name || 'Premium Asset'}</span></div><span className="text-rose-500">{(item.price * item.quantity).toLocaleString()}৳</span></div>))}<div className="pt-6 flex flex-col gap-2"><div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500"><span>Subtotal</span><span>{(selectedOrder.total - selectedOrder.deliveryCharge).toLocaleString()}৳</span></div><div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500"><span>Logistics</span><span>+{selectedOrder.deliveryCharge.toLocaleString()}৳</span></div><div className="mt-4 flex justify-between items-center"><span className="text-[11px] font-black uppercase tracking-[0.3em] text-rose-500">Total Liability</span><span className="text-3xl font-black text-white tracking-tighter">{selectedOrder.total.toLocaleString()}৳</span></div></div></div></div>
+                        <div className="flex items-center gap-3"><Hash className="w-5 h-5 text-rose-600" /><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Asset Breakdown (Packing List)</h4></div>
+                        <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+                           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform"><Package className="w-24 h-24" /></div>
+                           <div className="space-y-4 relative z-10">
+                              {selectedOrder.items.map((item, idx) => (
+                                 <div key={idx} className="flex justify-between items-center text-xs font-black pb-4 border-b border-white/5 last:border-0 last:pb-0">
+                                    <div className="flex items-center gap-3">
+                                       <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-[10px]">{item.quantity}</div>
+                                       <span className="uppercase text-white/90 truncate max-w-[150px]">{state.products.find(p => p.id === item.productId)?.name || 'Premium Asset'}</span>
+                                    </div>
+                                    <span className="text-rose-500">{(item.price * item.quantity).toLocaleString()}৳</span>
+                                 </div>
+                              ))}
+                              <div className="pt-6 flex flex-col gap-2">
+                                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500"><span>Subtotal</span><span>{(selectedOrder.total - (selectedOrder.deliveryCharge || 0)).toLocaleString()}৳</span></div>
+                                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500"><span>Logistics</span><span>+{selectedOrder.deliveryCharge?.toLocaleString()}৳</span></div>
+                                 <div className="mt-4 flex justify-between items-center">
+                                    <span className="text-[11px] font-black uppercase tracking-[0.3em] text-rose-500">Total Liability</span>
+                                    <span className="text-3xl font-black text-white tracking-tighter">{selectedOrder.total.toLocaleString()}৳</span>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
                         <div className="space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Operational State</label><select disabled={userRole === 'packaging'} className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none appearance-none cursor-pointer" value={selectedOrder.status} onChange={e => handleUpdateOrder({ status: e.target.value as any })}>{Object.keys(statusMap).map(key => <option key={key} value={key}>{statusMap[key].label}</option>)}</select></div>
                      </div>
                   </div>
+                  
                   <div className="space-y-12">
                      <div className="space-y-6">
                         <div className="flex items-center gap-3"><Truck className="w-5 h-5 text-rose-600" /><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Logistics Integration</h4></div>
@@ -808,35 +850,53 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                </div>
              </div>
 
-             <div className="px-16 py-10 border-t border-slate-50 flex justify-between items-center no-print bg-white/50 backdrop-blur-md">
-                <button onClick={() => handlePrint('invoice')} className="px-12 py-6 border-2 border-slate-900 rounded-full font-black uppercase text-xs tracking-[0.3em] flex items-center justify-center gap-6 hover:bg-slate-950 hover:text-white transition-all"><Printer className="w-6 h-6" /> Invoice</button>
+             <div className="px-16 py-10 border-t border-slate-50 flex justify-between items-center bg-white/50 backdrop-blur-md">
+                <button onClick={handlePrintInvoice} className="px-12 py-6 border-2 border-slate-900 rounded-full font-black uppercase text-xs tracking-[0.3em] flex items-center justify-center gap-6 hover:bg-slate-950 hover:text-white transition-all"><Printer className="w-6 h-6" /> Invoice</button>
                 {selectedOrder.status === 'pending' && userRole !== 'packaging' ? (
                   <button onClick={() => handleConfirmOrder(selectedOrder)} className="px-20 py-6 bg-emerald-600 text-white rounded-full font-black text-xs uppercase tracking-[0.5em] hover:bg-emerald-700 transition-all shadow-2xl flex items-center justify-center gap-3"><CheckCircle className="w-5 h-5"/> OK / Confirm Order</button>
                 ) : (
                   <button onClick={() => setSelectedOrder(null)} className="px-20 py-6 bg-slate-950 text-white rounded-full font-black text-xs uppercase tracking-[0.5em] hover:bg-rose-600 transition-all shadow-2xl flex items-center justify-center gap-3"><Check className="w-5 h-5"/> OK / Done</button>
                 )}
              </div>
-
-             <div className="hidden print:block absolute inset-0 bg-white" id="master-print-container">
-                {printMode === 'invoice' ? (
-                  <div className="p-20 w-full" id="invoice-print">
-                    <div className="flex justify-between items-start mb-24 pb-12 border-b-8 border-slate-900"><div><h1 className="text-5xl font-black italic tracking-tighter text-slate-950 uppercase">Upohar Luxe</h1><p className="text-[10px] font-black uppercase tracking-[0.5em] text-rose-600 mt-4">High-End Gifting Infrastructure</p></div><div className="text-right"><h2 className="text-6xl font-black text-slate-950 tracking-tighter">OFFICIAL INVOICE</h2><p className="text-sm font-black mt-2 uppercase text-slate-400 tracking-widest">Master ID: #{selectedOrder.id}</p></div></div>
-                    <div className="grid grid-cols-2 gap-24 mb-24 text-slate-900 font-bold uppercase"><div><p className="text-[11px] font-black text-slate-400 mb-4">Constituent Target</p><p className="text-3xl">{selectedOrder.customerName}</p><p className="text-xl">{selectedOrder.customerPhone}</p><p className="mt-6 text-base italic">{selectedOrder.shippingAddress}</p></div></div>
-                    <table className="w-full mb-24 border-collapse"><thead><tr className="border-b-4 border-slate-950"><th className="py-8 text-left uppercase">Asset Classification</th><th className="py-8 text-center uppercase">Quantity</th><th className="py-8 text-right uppercase">Unit Liability</th><th className="py-8 text-right uppercase">Total Liability</th></tr></thead><tbody className="divide-y-2 divide-slate-100">{selectedOrder.items.map((item, idx) => (<tr key={idx}><td className="py-10 text-lg uppercase">{state.products.find(p => p.id === item.productId)?.name}</td><td className="py-10 text-center text-xl">{item.quantity}</td><td className="py-10 text-right">{item.price}৳</td><td className="py-10 text-right text-xl">{item.price * item.quantity}৳</td></tr>))}</tbody></table>
-                    <div className="flex justify-end pt-12 border-t-4 border-slate-950"><p className="text-7xl font-black tracking-tighter">{selectedOrder.total.toLocaleString()}৳</p></div>
-                  </div>
-                ) : null}
-             </div>
           </div>
         </div>
       )}
 
+      {/* GLOBAL PRINT CSS ENGINE */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          body, html { height: auto !important; overflow: visible !important; background-color: white !important; margin: 0 !important; padding: 0 !important; }
-          .no-print, nav, header, aside, .fixed, .absolute:not(#master-print-container) { display: none !important; }
-          #master-print-container { display: block !important; visibility: visible !important; position: relative !important; width: 100% !important; background: white !important; z-index: 1000000 !important; margin: 0 !important; padding: 0 !important; }
-          #master-print-container * { visibility: visible !important; }
+          /* Force hide all standard UI elements */
+          body * { display: none !important; }
+          html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
+          
+          /* Show specifically targeted print containers */
+          #master-print-target, #master-print-target *,
+          .manifest-print-area, .manifest-print-area *,
+          #dispatch-print-engine, #dispatch-print-engine * {
+            display: block !important;
+            visibility: visible !important;
+          }
+
+          /* Correct positioning for print */
+          #master-print-target, .manifest-print-area, #dispatch-print-engine {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            z-index: 9999999 !important;
+          }
+
+          /* Ensure table rows don't break mid-air */
+          tr { page-break-inside: avoid !important; }
+          table { width: 100% !important; border-collapse: collapse !important; }
+          
+          /* Specific typography for print */
+          .font-black { font-weight: 900 !important; }
+          .uppercase { text-transform: uppercase !important; }
         }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
       `}} />
