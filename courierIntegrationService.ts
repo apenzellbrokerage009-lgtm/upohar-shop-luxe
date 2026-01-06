@@ -22,13 +22,14 @@ export const dispatchToSteadfast = async (order: Order, config: SteadfastConfig)
       return {
         success: true,
         trackingCode: result.tracking_code,
-        status: 'Dispatched'
+        status: 'Dispatched',
+        message: result.message || "Dispatched successfully via Steadfast protocol"
       };
     } else {
       throw new Error(result.message || "Steadfast dispatch failed.");
     }
   } catch (err: any) {
-    throw new Error(err.message);
+    throw new Error(err.message || "Network error during Steadfast dispatch");
   }
 };
 
@@ -53,12 +54,13 @@ export const dispatchToPathao = async (order: Order, config: PathaoConfig) => {
       return {
         success: true,
         trackingCode: result.tracking_code,
-        status: 'Dispatched'
+        status: 'Dispatched',
+        message: result.message || "Dispatched successfully via Pathao protocol"
       };
     } else {
       throw new Error(result.message || "Pathao dispatch failed.");
     }
   } catch (err: any) {
-    throw new Error(err.message);
+    throw new Error(err.message || "Network error during Pathao dispatch");
   }
 };

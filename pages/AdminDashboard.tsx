@@ -5,7 +5,7 @@ import {
   Calculator, ShoppingBag, UserCheck, Package, FolderTree, 
   Wallet, Users, Palette, PanelTop, Layout, Settings, 
   Clock, Receipt, AlertCircle, TrendingUp, Printer, ShieldAlert, Cpu, CheckCircle2, XCircle, Edit, FileText, Download, Save, PhoneCall, CheckCircle, Ban, Truck, Search, Filter, Eye, Globe, Trash2, Send, ExternalLink,
-  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks, Heart, Contact, UserCog, Mail, Navigation, Star, Fingerprint, LocateFixed
+  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks, Heart, Contact, UserCog, Mail, Navigation, Star, Fingerprint, LocateFixed, MessageSquare
 } from 'lucide-react';
 import { checkCustomerReliability } from '../courierService';
 import { dispatchToSteadfast, dispatchToPathao } from '../courierIntegrationService';
@@ -27,6 +27,7 @@ import PagesModule from '../components/admin/PagesModule';
 import CustomLandingBuilder from '../components/admin/CustomLandingBuilder';
 import PackagingManifest from '../components/admin/PackagingManifest';
 import DeliveryDispatch from '../components/admin/DeliveryDispatch';
+import LiveSupportModule from '../components/admin/LiveSupportModule';
 
 const statusMap: Record<string, { label: string, color: string, ring: string }> = {
   pending: { label: 'Pending', color: 'text-amber-600', ring: 'ring-amber-100' },
@@ -127,7 +128,8 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
     return result;
   }, [unifiedCustomers, state.orders, customerSearch, customerFilter]);
 
-  const toggleSelectOrder = (id: string) => {
+  const toggleSelectOrder = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setSelectedOrderIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
@@ -146,35 +148,47 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
     alert(`Bulk update successful: ${selectedOrderIds.length} orders moved to ${newStatus}`);
   };
 
-  const handleBulkDispatch = async (courier: 'steadfast' | 'pathao') => {
-    if (selectedOrderIds.length === 0) return;
-    const ordersToDispatch = state.orders.filter(o => selectedOrderIds.includes(o.id));
+  const handleBulkDispatch = async (courier: 'steadfast' | 'pathao' | 'local') => {
+    if (isBulkProcessing || selectedOrderIds.length === 0) return;
     
+    if (!confirm(`Deploy logistics for ${selectedOrderIds.length} selected entities?`)) return;
+
+    const ordersToDispatch = state.orders.filter(o => selectedOrderIds.includes(o.id));
     setIsBulkProcessing(true);
+    
     let successCount = 0;
     let failCount = 0;
 
     for (const order of ordersToDispatch) {
       try {
-        const result = courier === 'steadfast' 
-          ? await dispatchToSteadfast(order, state.steadfast) 
-          : await dispatchToPathao(order, state.pathao);
+        let result;
+        if (courier === 'steadfast' && state.steadfast.isEnabled) {
+          result = await dispatchToSteadfast(order, state.steadfast);
+        } else if (courier === 'pathao' && state.pathao.isEnabled) {
+          result = await dispatchToPathao(order, state.pathao);
+        } else {
+          result = { success: true, message: 'Status updated locally' };
+        }
         
         if (result.success) {
           successCount++;
+          // Progressive update to UI
           setState(prev => ({
             ...prev,
             orders: prev.orders.map(o => o.id === order.id ? { ...o, status: 'shipped' as const } : o)
           }));
-        } else failCount++;
+        } else {
+          failCount++;
+        }
       } catch (e) {
         failCount++;
+        console.error(`Dispatch error for ${order.id}:`, e);
       }
     }
 
     setIsBulkProcessing(false);
     setSelectedOrderIds([]);
-    alert(`Dispatch Complete! Success: ${successCount}, Failed: ${failCount}`);
+    alert(`Bulk Routing Finalized.\n\nValidated Successful: ${successCount}\nRouting Anomalies: ${failCount}`);
   };
 
   const handleCourierCheck = async (phone: string) => {
@@ -300,8 +314,9 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
   const navGroups = useMemo(() => {
     const groups = [
       { label: 'Strategy', roles: ['admin'], items: [{ id: 'dashboard', label: 'Admin Overview', icon: BarChart3 }] },
-      { label: 'Operations', roles: ['admin', 'call_center'], items: [
+      { label: 'Operations', roles: ['admin', 'call_center', 'support_agent'], items: [
         { id: 'pos', label: 'POS Terminal', icon: Calculator, roles: ['admin'] },
+        { id: 'support', label: 'Live Support', icon: MessageSquare, count: state.chatSessions.filter(s => s.status === 'open').length },
         { id: 'orders', label: 'Order Stream', icon: ShoppingBag, count: state.orders.length },
         { id: 'leads', label: 'Lead Recovery', icon: UserCheck, count: state.incompleteOrders.length },
         { id: 'dispatch', label: 'Delivery Dispatch', icon: Truck, count: state.orders.filter(o => o.status === 'processing').length },
@@ -335,7 +350,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       ...g,
       items: g.items.filter(i => !i.roles || i.roles.includes(userRole))
     }));
-  }, [userRole, state.orders.length, state.incompleteOrders.length, unifiedCustomers.length, state.orders.filter(o => o.status === 'processing').length]);
+  }, [userRole, state.orders.length, state.incompleteOrders.length, unifiedCustomers.length, state.orders.filter(o => o.status === 'processing').length, state.chatSessions]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-inter selection:bg-rose-100 selection:text-rose-900">
@@ -411,6 +426,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
             </div>
           )}
 
+          {activeTab === 'support' && <LiveSupportModule state={state} setState={setState} />}
           {activeTab === 'dispatch' && <DeliveryDispatch state={state} setState={setState} />}
           {activeTab === 'leads' && (
              <div className="space-y-10 animate-in fade-in duration-500">
@@ -622,7 +638,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                       <tbody className="divide-y divide-slate-50">
                          {filteredOrders.map(o => (
                            <tr key={o.id} className={`hover:bg-slate-50/40 transition-all group ${selectedOrderIds.includes(o.id) ? 'bg-rose-50/30' : ''}`}>
-                              <td className="px-6 py-10 text-center"><button onClick={() => toggleSelectOrder(o.id)}>{selectedOrderIds.includes(o.id) ? <CheckSquare className="text-rose-600 w-5 h-5"/> : <Square className="w-5 h-5 text-slate-300"/></button></td>
+                              <td className="px-6 py-10 text-center"><button onClick={(e) => toggleSelectOrder(o.id, e)}>{selectedOrderIds.includes(o.id) ? <CheckSquare className="text-rose-600 w-5 h-5"/> : <Square className="w-5 h-5 text-slate-300"/></button></td>
                               <td className="px-8 py-10"><div><p className="text-[11px] font-black text-slate-900 tracking-tight">#{o.id}</p><p className="text-[9px] font-black text-slate-400 uppercase mt-1">{new Date(o.createdAt).toLocaleDateString()}</p></div></td>
                               <td className="px-8 py-10"><p className="text-[13px] font-black uppercase text-slate-900">{o.customerName}</p><p className="text-[11px] font-black text-rose-600 mt-1 flex items-center gap-2 cursor-pointer"><PhoneCall className="w-3 h-3" /> {o.customerPhone}</p></td>
                               <td className="px-8 py-10"><p className="text-xl font-black text-slate-950 tracking-tighter">{(o.total || 0).toLocaleString()}৳</p></td>
@@ -639,7 +655,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                   <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-slate-950/95 backdrop-blur-2xl px-10 py-6 rounded-[3rem] border border-white/10 shadow-2xl flex items-center gap-10 animate-in slide-in-from-bottom-10">
                     <div className="flex items-center gap-4 border-r border-white/10 pr-10">
                       <div className="w-10 h-10 bg-rose-600 text-white rounded-2xl flex items-center justify-center font-black text-sm">{selectedOrderIds.length}</div>
-                      <p className="text-[10px] font-black text-white uppercase tracking-widest">Bulk Actions Console</p>
+                      <p className="text-[10px] font-black text-white uppercase tracking-widest">Bulk Actions</p>
                     </div>
                     
                     <div className="flex gap-2">
@@ -650,11 +666,12 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                        </div>
                        
                        <button 
-                         disabled={isBulkProcessing || !state.steadfast.isEnabled} 
-                         onClick={() => handleBulkDispatch('steadfast')} 
+                         disabled={isBulkProcessing} 
+                         onClick={() => handleBulkDispatch(state.steadfast.isEnabled ? 'steadfast' : state.pathao.isEnabled ? 'pathao' : 'local')} 
                          className="px-6 py-3 bg-rose-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2 disabled:opacity-30"
                        >
-                         {isBulkProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Send className="w-3 h-3"/>} Bulk Steadfast
+                         {isBulkProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Send className="w-3 h-3"/>} 
+                         {state.steadfast.isEnabled ? 'Bulk SF Dispatch' : state.pathao.isEnabled ? 'Bulk PH Dispatch' : 'Bulk Ship Local'}
                        </button>
                     </div>
 
@@ -874,7 +891,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
           .manifest-print-area, .manifest-print-area *,
           #dispatch-print-engine, #dispatch-print-engine * {
             display: block !important;
-            visibility: visible !important;
+            visibility: visible !important; 
           }
 
           /* Correct positioning for print */

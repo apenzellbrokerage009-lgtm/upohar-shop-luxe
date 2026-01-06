@@ -14,6 +14,7 @@ import CustomLandingView from './pages/CustomLandingView';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import CheckoutModal from './components/CheckoutModal';
 import MobileBottomNav from './components/MobileBottomNav';
+import ChatWidget from './components/ChatWidget';
 import { tracker } from './trackingService';
 
 const App: React.FC = () => {
@@ -282,6 +283,7 @@ const App: React.FC = () => {
         user={state.currentUser}
       />
       {currentPage !== 'custom-landing' && <MobileBottomNav currentPage={currentPage} onNavigate={handleNavigate} userRole={state.currentUser?.role} />}
+      {currentPage !== 'admin' && <ChatWidget state={state} setState={setState} />}
     </div>
   );
 };

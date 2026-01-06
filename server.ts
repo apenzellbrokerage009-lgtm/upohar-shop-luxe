@@ -20,6 +20,8 @@ let dbState: AppState = {
   employees: [],
   adminUsers: [{ id: 'master-1', name: 'Master Admin', email: 'admin@upoharluxe.com', role: 'admin', password: 'admin' }],
   customers: [],
+  // Fix: Added missing chatSessions property to match AppState interface
+  chatSessions: [],
   attendance: [],
   payroll: [],
   blogPosts: [],

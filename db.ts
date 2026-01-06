@@ -20,6 +20,8 @@ export const getDefaultState = (): AppState => ({
   employees: [],
   adminUsers: [MASTER_ADMIN],
   customers: [],
+  // Fix: Added missing chatSessions property to match AppState interface
+  chatSessions: [],
   attendance: [],
   payroll: [],
   blogPosts: [],
@@ -56,6 +58,8 @@ export const getDb = async (): Promise<AppState> => {
       incompleteOrders: Array.isArray(remote.incompleteOrders) ? remote.incompleteOrders : [],
       expenses: Array.isArray(remote.expenses) ? remote.expenses : [],
       employees: Array.isArray(remote.employees) ? remote.employees : [],
+      // Fix: Ensure chatSessions is initialized correctly during merge
+      chatSessions: Array.isArray(remote.chatSessions) ? remote.chatSessions : [],
       customLandings: Array.isArray(remote.customLandings) ? remote.customLandings : []
     };
 

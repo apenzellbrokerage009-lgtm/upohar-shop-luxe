@@ -25,7 +25,7 @@ export interface Category {
   image?: string;
 }
 
-export type UserRole = 'admin' | 'customer' | 'call_center' | 'packaging';
+export type UserRole = 'admin' | 'customer' | 'call_center' | 'packaging' | 'support_agent';
 
 export interface User {
   id: string;
@@ -90,6 +90,55 @@ export interface Employee {
   phone: string;
   joinedDate: string;
   status: 'Active' | 'Inactive';
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'customer' | 'staff';
+  text: string;
+  timestamp: string;
+  isRead: boolean;
+}
+
+export interface ChatSession {
+  id: string;
+  customerId: string;
+  customerName: string;
+  lastMessage?: string;
+  updatedAt: string;
+  status: 'open' | 'closed';
+  assignedStaffId?: string;
+  messages: ChatMessage[];
+}
+
+export interface AppState {
+  products: Product[];
+  categories: Category[];
+  orders: Order[];
+  incompleteOrders: IncompleteOrder[];
+  expenses: Expense[];
+  employees: Employee[];
+  adminUsers: User[];
+  customers: User[];
+  chatSessions: ChatSession[];
+  attendance: any[];
+  payroll: any[];
+  blogPosts: any[];
+  currentUser: User | null;
+  hero: HeroSection;
+  header: HeaderConfig;
+  footer: FooterConfig;
+  theme: ThemeConfig;
+  homeSections: HomeSection[];
+  tracking: TrackingConfig;
+  steadfast: SteadfastConfig;
+  pathao: PathaoConfig;
+  customPages: any[];
+  navMenus: NavMenu[];
+  customLandings: CustomLandingPage[];
 }
 
 export interface ThemeConfig {
@@ -210,30 +259,4 @@ export interface CourierStats {
   successRate: number;
   isRisk: boolean;
   history: string;
-}
-
-export interface AppState {
-  products: Product[];
-  categories: Category[];
-  orders: Order[];
-  incompleteOrders: IncompleteOrder[];
-  expenses: Expense[];
-  employees: Employee[];
-  adminUsers: User[];
-  customers: User[];
-  attendance: any[];
-  payroll: any[];
-  blogPosts: any[];
-  currentUser: User | null;
-  hero: HeroSection;
-  header: HeaderConfig;
-  footer: FooterConfig;
-  theme: ThemeConfig;
-  homeSections: HomeSection[];
-  tracking: TrackingConfig;
-  steadfast: SteadfastConfig;
-  pathao: PathaoConfig;
-  customPages: any[];
-  navMenus: NavMenu[];
-  customLandings: CustomLandingPage[];
 }
