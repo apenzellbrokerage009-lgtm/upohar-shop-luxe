@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product, Category } from '../types';
 import { Star, ShoppingBag, Eye, SlidersHorizontal, ChevronRight, XCircle, Search } from 'lucide-react';
 
@@ -10,10 +10,17 @@ interface ShopPageProps {
   onClearSearch: () => void;
   onProductClick: (slug: string) => void;
   onOrderNow: (product: Product) => void;
+  initialCategory?: string;
 }
 
-const ShopPage: React.FC<ShopPageProps> = ({ products, categories, searchQuery, onClearSearch, onProductClick, onOrderNow }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string | 'All'>('All');
+const ShopPage: React.FC<ShopPageProps> = ({ products, categories, searchQuery, onClearSearch, onProductClick, onOrderNow, initialCategory = 'All' }) => {
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
+
+  useEffect(() => {
+    if (initialCategory) {
+      setSelectedCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   const filteredProducts = selectedCategory === 'All' 
     ? products 

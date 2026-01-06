@@ -1,18 +1,19 @@
 
 import React, { useMemo } from 'react';
-import { HeroSection, Product, HomeSection } from '../types';
+import { HeroSection, Product, HomeSection, Category } from '../types';
 import { ArrowRight, Star, ShoppingBag, Truck, ShieldCheck, Clock, ChevronRight } from 'lucide-react';
 
 interface LandingPageProps {
   hero: HeroSection;
   products: Product[];
+  categories: Category[];
   sections: HomeSection[];
   onProductClick: (slug: string) => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, id?: string) => void;
   onOrderNow: (product: Product) => void; 
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ hero, products, sections, onProductClick, onNavigate, onOrderNow }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ hero, products, categories, sections, onProductClick, onNavigate, onOrderNow }) => {
   
   const renderProductGrid = (title: string, items: Product[]) => (
     <section key={title} className="py-24 max-w-7xl mx-auto px-4 animate-in fade-in slide-in-from-bottom-10 duration-1000">
@@ -73,6 +74,53 @@ const LandingPage: React.FC<LandingPageProps> = ({ hero, products, sections, onP
             </button>
           </div>
         </div>
+      </section>
+
+      {/* Side-Scrolling Category Section */}
+      <section className="bg-white py-12 border-b border-slate-50 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400">Discover Collections</h3>
+            <button onClick={() => onNavigate('shop')} className="text-[9px] font-black uppercase tracking-widest text-rose-600 hover:text-rose-700 flex items-center gap-1 transition-all">
+              View All <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          
+          <div className="flex gap-8 overflow-x-auto pb-8 scrollbar-hide snap-x">
+            {categories.map((cat, idx) => {
+              // Find first product in this category to use its image if cat.image is missing
+              const representativeProduct = products.find(p => p.category === cat.name);
+              const displayImage = cat.image || representativeProduct?.image || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=300';
+
+              return (
+                <button 
+                  key={cat.id} 
+                  onClick={() => onNavigate('shop', cat.name)}
+                  className="flex flex-col items-center gap-4 group flex-shrink-0 snap-start animate-in fade-in slide-in-from-right-4"
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
+                  <div className="w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-slate-50 group-hover:border-rose-600 transition-all duration-500 p-1.5 bg-slate-50 group-hover:scale-105 shadow-sm group-hover:shadow-xl">
+                    <div className="w-full h-full rounded-full overflow-hidden relative">
+                       <img 
+                        src={displayImage} 
+                        alt={cat.name} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-125"
+                      />
+                      <div className="absolute inset-0 bg-rose-900/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-rose-600 transition-colors">
+                    {cat.name}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          .scrollbar-hide::-webkit-scrollbar { display: none; }
+          .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        `}} />
       </section>
 
       {/* Trust Badges */}

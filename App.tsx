@@ -25,6 +25,7 @@ const App: React.FC = () => {
   const [selectedLanding, setSelectedLanding] = useState<CustomLandingPage | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('All');
   
   const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
   const [checkoutQty, setCheckoutQty] = useState(1);
@@ -102,7 +103,14 @@ const App: React.FC = () => {
       return;
     }
 
-    if (page === 'product' && slugOrId) {
+    if (page === 'shop') {
+      if (slugOrId) {
+        setFilterCategory(slugOrId);
+      } else {
+        setFilterCategory('All');
+      }
+      setCurrentPage('shop');
+    } else if (page === 'product' && slugOrId) {
       const product = state.products.find(p => p.slug === slugOrId || p.id === slugOrId);
       if (product) { setSelectedProductId(product.id); setCurrentPage('product'); }
     } else if (page === 'track') {
@@ -216,6 +224,7 @@ const App: React.FC = () => {
           <LandingPage 
             hero={state.hero} 
             products={state.products}
+            categories={state.categories}
             sections={state.homeSections}
             onProductClick={(slug) => handleNavigate('product', slug)}
             onNavigate={handleNavigate}
@@ -230,6 +239,7 @@ const App: React.FC = () => {
             onClearSearch={() => setSearchQuery('')}
             onProductClick={(slug) => handleNavigate('product', slug)}
             onOrderNow={triggerCheckout}
+            initialCategory={filterCategory}
           />
         )}
         {currentPage === 'product' && (
