@@ -1,5 +1,5 @@
 
-import { ThemeConfig, HomeSection, Category } from './types';
+import { ThemeConfig, HomeSection, Category, NavMenu } from './types';
 
 export const INITIAL_THEME: ThemeConfig = {
   primaryColor: '#0f172a', 
@@ -17,8 +17,31 @@ export const INITIAL_CATEGORIES: Category[] = [
   { id: 'cat-5', name: 'Decor', slug: 'decor' }
 ];
 
-// Added CATEGORIES constant derived from names of INITIAL_CATEGORIES
 export const CATEGORIES = INITIAL_CATEGORIES.map(cat => cat.name);
+
+export const INITIAL_NAV_MENUS: NavMenu[] = [
+  { id: 'm1', label: 'Home', href: 'landing' },
+  { id: 'm2', label: 'Collections', href: 'shop' },
+  { id: 'm3', label: 'About Luxe', href: 'about' },
+  { id: 'm4', label: 'Concierge', href: 'contact' }
+];
+
+export const INITIAL_CUSTOM_PAGES: any[] = [
+  {
+    id: 'p1',
+    title: 'About Upohar Luxe',
+    slug: 'about',
+    content: 'Upohar Luxe is Bangladesh\'s premier destination for luxury gifting, founded on the principle that every gift tells a story. We curate the world\'s finest roses, chocolates, and artisan goods to help you celebrate life\'s most precious moments.',
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'p2',
+    title: 'Gifting Concierge',
+    slug: 'contact',
+    content: 'Need help choosing the perfect gift? Our concierge team is available 24/7. Email: concierge@upoharluxe.com | WhatsApp: +880 1700-000000',
+    updatedAt: new Date().toISOString()
+  }
+];
 
 export const INITIAL_HOME_SECTIONS: HomeSection[] = [
   { id: '1', type: 'new_arrivals', title: 'New Arrivals', limit: 4, isActive: true },
@@ -54,6 +77,26 @@ export const INITIAL_PRODUCTS: any[] = [
     stock: 50, rating: 4.9, reviews: 85, isFeatured: true, createdAt: new Date().toISOString(), salesCount: 120
   }
 ];
-export const INITIAL_HERO: any = { title: 'Elevate the Art of Gifting', subtitle: 'Discover curated premium collections.', image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=2040', ctaText: 'Shop the Collection' };
-export const INITIAL_HEADER: any = { announcementText: '✨ 50% discount for this month! Order Now ✨', announcementBgColor: '#0f172a', announcementTextColor: '#ffffff', logoUrl: '', isAnnouncementEnabled: true };
-export const INITIAL_FOOTER: any = { aboutText: 'Upohar Luxe is Bangladesh\'s premier destination for luxury gifting.', address: 'Level 4, High-End Plaza, Gulshan 2, Dhaka', phone: '+880 1700-000000', email: 'concierge@upoharluxe.com', copyright: '© 2024 Upohar Luxe.', columns: [], socials: [] };
+
+export const INITIAL_HERO: any = { 
+  title: 'Elevate the Art of Gifting', 
+  subtitle: 'Discover curated premium collections.', 
+  image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=2040', 
+  ctaText: 'Shop the Collection',
+  logo: '' 
+};
+
+export const INITIAL_HEADER: any = { announcementText: '✨ 50% discount for this month! Order Now ✨', announcementBgColor: '#0f172a', announcementTextColor: '#ffffff', logoUrl: '', faviconUrl: '', isAnnouncementEnabled: true };
+
+export const INITIAL_FOOTER: any = { 
+  aboutText: 'Upohar Luxe is Bangladesh\'s premier destination for luxury gifting.', 
+  address: 'Level 4, High-End Plaza, Gulshan 2, Dhaka', 
+  phone: '+880 1700-000000', 
+  email: 'concierge@upoharluxe.com', 
+  copyright: '© 2024 Upohar Luxe.', 
+  columns: [], 
+  socials: [
+    { platform: 'Facebook', url: 'https://facebook.com/upoharluxe' },
+    { platform: 'Instagram', url: 'https://instagram.com/upoharluxe' }
+  ] 
+};

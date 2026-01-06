@@ -116,6 +116,7 @@ export interface HeaderConfig {
   announcementBgColor: string;
   announcementTextColor: string;
   logoUrl: string;
+  faviconUrl: string;
   isAnnouncementEnabled: boolean;
 }
 
@@ -176,13 +177,25 @@ export interface PathaoConfig {
   isEnabled: boolean;
 }
 
-export interface CourierProfile {
-  courier?: string;
-  total_orders?: number;
-  total_success?: number;
-  total_cancel?: number;
+export interface CustomLandingPage {
+  id: string;
+  title: string;
+  slug: string;
+  html: string;
+  css: string;
+  js: string;
+  productId?: string;
+  createdAt: string;
 }
 
+// Added missing CourierProfile interface
+export interface CourierProfile {
+  courier: string;
+  total_orders: number;
+  total_success: number;
+}
+
+// Added missing CourierStats interface
 export interface CourierStats {
   phone: string;
   couriers: CourierProfile[];
@@ -216,4 +229,5 @@ export interface AppState {
   pathao: PathaoConfig;
   customPages: any[];
   navMenus: NavMenu[];
+  customLandings: CustomLandingPage[];
 }

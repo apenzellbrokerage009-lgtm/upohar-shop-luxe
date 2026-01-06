@@ -1,7 +1,7 @@
 
 import { AppState } from './types';
 import { api } from './api';
-import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES } from './constants';
+import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES, INITIAL_NAV_MENUS, INITIAL_CUSTOM_PAGES } from './constants';
 
 export const getDefaultState = (): AppState => ({
   products: INITIAL_PRODUCTS,
@@ -22,8 +22,9 @@ export const getDefaultState = (): AppState => ({
   tracking: { fbPixelId: '', fbAccessToken: '', fbTestCode: '', gtmId: '', gtmServerUrl: '', tiktokId: '', isEnabled: false },
   steadfast: { apiKey: '', secretKey: '', isEnabled: false },
   pathao: { clientId: '', clientSecret: '', username: '', password: '', storeId: '', isEnabled: false },
-  customPages: [],
-  navMenus: []
+  customPages: INITIAL_CUSTOM_PAGES,
+  navMenus: INITIAL_NAV_MENUS,
+  customLandings: []
 });
 
 export const getDb = async (): Promise<AppState> => {

@@ -1,5 +1,5 @@
 
-import express, { RequestHandler } from 'express';
+import express from 'express';
 import { AppState, Order, Product, Expense } from './types';
 import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES } from './constants';
 import { GoogleGenAI } from "@google/genai";
@@ -7,8 +7,8 @@ import { GoogleGenAI } from "@google/genai";
 const app = express();
 const PORT = 3000;
 
-// Fix: Explicitly cast express.json() to RequestHandler to avoid "NextHandleFunction not assignable to PathParams" error in app.use()
-app.use(express.json() as RequestHandler);
+// Fix: Use express.json() as global middleware and cast to any to bypass strict type mismatch between NextHandleFunction and RequestHandler definitions.
+app.use(express.json() as any);
 
 // Initialize Gemini for backend use
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -33,7 +33,9 @@ let dbState: AppState = {
   steadfast: { apiKey: '', secretKey: '', isEnabled: false },
   pathao: { clientId: '', clientSecret: '', username: '', password: '', storeId: '', isEnabled: false },
   customPages: [],
-  navMenus: []
+  navMenus: [],
+  // Fix: Missing customLandings in AppState initialization
+  customLandings: []
 };
 
 // 1. DATA STATE ENDPOINTS

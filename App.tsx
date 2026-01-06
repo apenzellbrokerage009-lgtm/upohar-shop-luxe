@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AppState, Product, Order, IncompleteOrder } from './types';
+import { AppState, Product, Order, IncompleteOrder, CustomLandingPage } from './types';
 import { getDb, saveDb, getDefaultState } from './db';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -10,6 +10,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import ProductPage from './pages/ProductPage';
 import LoginPage from './pages/LoginPage';
+import CustomLandingView from './pages/CustomLandingView';
 import CheckoutModal from './components/CheckoutModal';
 import MobileBottomNav from './components/MobileBottomNav';
 import { tracker } from './trackingService';
@@ -19,11 +20,24 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<string>('landing');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [selectedCustomPageId, setSelectedCustomPageId] = useState<string | null>(null);
+  const [selectedLanding, setSelectedLanding] = useState<CustomLandingPage | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
   const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
   const [checkoutQty, setCheckoutQty] = useState(1);
+
+  // Favicon Injector
+  useEffect(() => {
+    if (state.header.faviconUrl) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'shortcut icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = state.header.faviconUrl;
+    }
+  }, [state.header.faviconUrl]);
 
   // Dynamic Theme Injector
   useEffect(() => {
@@ -64,6 +78,10 @@ const App: React.FC = () => {
         const slug = path.split('/')[1];
         const p = dbState.products.find(prod => prod.slug === slug);
         if (p) { setSelectedProductId(p.id); setCurrentPage('product'); }
+      } else if (path.startsWith('landing/')) {
+        const slug = path.split('/')[1];
+        const landing = dbState.customLandings.find(l => l.slug === slug);
+        if (landing) { setSelectedLanding(landing); setCurrentPage('custom-landing'); }
       } else if (path && path !== 'landing') {
         setCurrentPage(path);
       }
@@ -75,6 +93,10 @@ const App: React.FC = () => {
     if (page === 'product' && slugOrId) {
       const product = state.products.find(p => p.slug === slugOrId || p.id === slugOrId);
       if (product) { setSelectedProductId(product.id); setCurrentPage('product'); }
+    } else if (page.startsWith('landing/') || (page === 'landing' && slugOrId)) {
+      const slug = slugOrId || page.split('/')[1];
+      const landing = state.customLandings.find(l => l.slug === slug);
+      if (landing) { setSelectedLanding(landing); setCurrentPage('custom-landing'); }
     } else {
       setCurrentPage(page);
     }
@@ -153,18 +175,20 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <Navbar 
-        user={state.currentUser} 
-        onNavigate={handleNavigate} 
-        cartCount={0}
-        onLogout={() => setState(p => ({...p, currentUser: null}))}
-        logo={state.hero.logo}
-        menus={state.navMenus}
-        onSearch={(q) => setSearchQuery(q)}
-        config={state.header}
-      />
+      {currentPage !== 'custom-landing' && (
+        <Navbar 
+          user={state.currentUser} 
+          onNavigate={handleNavigate} 
+          cartCount={0}
+          onLogout={() => setState(p => ({...p, currentUser: null}))}
+          logo={state.hero.logo}
+          menus={state.navMenus}
+          onSearch={(q) => setSearchQuery(q)}
+          config={state.header}
+        />
+      )}
       
-      <main className="pb-32 lg:pb-0">
+      <main className={currentPage === 'custom-landing' ? '' : 'pb-32 lg:pb-0'}>
         {currentPage === 'landing' && (
           <LandingPage 
             hero={state.hero} 
@@ -192,6 +216,9 @@ const App: React.FC = () => {
             onNavigate={handleNavigate}
           />
         )}
+        {currentPage === 'custom-landing' && selectedLanding && (
+          <CustomLandingView page={selectedLanding} />
+        )}
         {currentPage === 'admin' && (
           <AdminDashboard state={state} setState={setState} />
         )}
@@ -205,7 +232,7 @@ const App: React.FC = () => {
         {currentPage === 'login' && <LoginPage onLogin={(u) => { setState(p => ({...p, currentUser: u})); setCurrentPage('landing'); }} />}
       </main>
 
-      {currentPage !== 'admin' && <Footer config={state.footer} onNavigate={handleNavigate} logo={state.hero.logo} />}
+      {currentPage !== 'admin' && currentPage !== 'custom-landing' && <Footer config={state.footer} onNavigate={handleNavigate} logo={state.hero.logo} />}
 
       <CheckoutModal 
         isOpen={!!checkoutProduct}
@@ -215,7 +242,7 @@ const App: React.FC = () => {
         onOrder={handleConfirmOrder}
         onUpdateDraft={handleUpdateDraft}
       />
-      <MobileBottomNav currentPage={currentPage} onNavigate={handleNavigate} userRole={state.currentUser?.role} />
+      {currentPage !== 'custom-landing' && <MobileBottomNav currentPage={currentPage} onNavigate={handleNavigate} userRole={state.currentUser?.role} />}
     </div>
   );
 };

@@ -5,7 +5,7 @@ import {
   Calculator, ShoppingBag, UserCheck, Package, FolderTree, 
   Wallet, Users, Palette, PanelTop, Layout, Settings, 
   Clock, Receipt, AlertCircle, TrendingUp, Printer, ShieldAlert, Cpu, CheckCircle2, XCircle, Edit, FileText, Download, Save, PhoneCall, CheckCircle, Ban, Truck, Search, Filter, Eye, Globe, Trash2, Send, ExternalLink,
-  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square
+  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap
 } from 'lucide-react';
 import { checkCustomerReliability } from '../courierService';
 import { dispatchToSteadfast, dispatchToPathao } from '../courierIntegrationService';
@@ -21,6 +21,10 @@ import HeaderStudio from '../components/admin/HeaderStudio';
 import DesignStudio from '../components/admin/DesignStudio';
 import IntegrationsModule from '../components/admin/IntegrationsModule';
 import CourierCheckerModule from '../components/admin/CourierCheckerModule';
+import LandingPageStudio from '../components/admin/LandingPageStudio';
+import MenuStudio from '../components/admin/MenuStudio';
+import PagesModule from '../components/admin/PagesModule';
+import CustomLandingBuilder from '../components/admin/CustomLandingBuilder';
 
 interface AdminProps {
   state: AppState;
@@ -256,12 +260,18 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       { id: 'leads', label: 'Lead Recovery', icon: UserCheck, count: state.incompleteOrders.length },
       { id: 'courier-checker', label: 'Courier Checker', icon: SearchCode },
     ]},
+    { label: 'Content & Branding', items: [
+      { id: 'custom-builder', label: 'Landing Studio', icon: Zap },
+      { id: 'landing-studio', label: 'Hero Studio', icon: Layout },
+      { id: 'menu-studio', label: 'Menu Matrix', icon: MenuIcon },
+      { id: 'pages', label: 'Custom Pages', icon: FileEdit },
+      { id: 'header-design', label: 'Header Studio', icon: PanelTop },
+      { id: 'footer-design', label: 'Footer Studio', icon: Layout },
+      { id: 'design-studio', label: 'Visual Engine', icon: Palette },
+    ]},
     { label: 'Asset Management', items: [
       { id: 'inventory', label: 'Inventory Vault', icon: Package },
       { id: 'categories', label: 'Collections', icon: FolderTree },
-      { id: 'design-studio', label: 'Visual Studio', icon: Palette },
-      { id: 'header-design', label: 'Header Studio', icon: PanelTop },
-      { id: 'footer-design', label: 'Footer Studio', icon: Layout },
     ]},
     { label: 'Intelligence', items: [
       { id: 'accounts', label: 'Financials', icon: Wallet },
@@ -350,6 +360,10 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
           {activeTab === 'design-studio' && <DesignStudio state={state} setState={setState} />}
           {activeTab === 'integrations' && <IntegrationsModule state={state} setState={setState} />}
           {activeTab === 'courier-checker' && <CourierCheckerModule />}
+          {activeTab === 'landing-studio' && <LandingPageStudio state={state} setState={setState} />}
+          {activeTab === 'menu-studio' && <MenuStudio state={state} setState={setState} />}
+          {activeTab === 'pages' && <PagesModule state={state} setState={setState} />}
+          {activeTab === 'custom-builder' && <CustomLandingBuilder state={state} setState={setState} />}
           
           {activeTab === 'orders' && (
              <div className="space-y-10 animate-in fade-in duration-500 pb-32">
@@ -651,7 +665,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
 
                         <div className="space-y-2">
                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Operational State</label>
-                           <select className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none appearance-none cursor-pointer" value={selectedOrder.status} onChange={e => handleUpdateOrder({ status: e.target.value as any })}>
+                           <select className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm appearance-none cursor-pointer" value={selectedOrder.status} onChange={e => handleUpdateOrder({ status: e.target.value as any })}>
                              {Object.keys(statusMap).map(key => <option key={key} value={key}>{statusMap[key].label}</option>)}
                            </select>
                         </div>
