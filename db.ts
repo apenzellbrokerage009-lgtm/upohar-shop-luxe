@@ -1,7 +1,15 @@
 
-import { AppState } from './types';
+import { AppState, User } from './types';
 import { api } from './api';
 import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES, INITIAL_NAV_MENUS, INITIAL_CUSTOM_PAGES } from './constants';
+
+export const MASTER_ADMIN: User = {
+  id: 'master-1',
+  name: 'Master Admin',
+  email: 'admin@upoharluxe.com',
+  role: 'admin',
+  password: 'admin'
+};
 
 export const getDefaultState = (): AppState => ({
   products: INITIAL_PRODUCTS,
@@ -10,6 +18,7 @@ export const getDefaultState = (): AppState => ({
   incompleteOrders: [],
   expenses: [],
   employees: [],
+  adminUsers: [MASTER_ADMIN],
   attendance: [],
   payroll: [],
   blogPosts: [],

@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { User } from '../types';
-import { ShieldCheck, ArrowRight } from 'lucide-react';
+import { User, AppState } from '../types';
+import { ShieldCheck, ArrowRight, Lock, Mail, AlertCircle } from 'lucide-react';
+import { getDb } from '../db';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
@@ -9,85 +10,94 @@ interface LoginPageProps {
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin({
-      id: isAdmin ? 'admin-1' : 'user-' + Math.random().toString(36).substr(2, 5),
-      email: email || 'admin@upoharluxe.com',
-      name: isAdmin ? 'Admin Manager' : 'Valued Customer',
-      role: isAdmin ? 'admin' : 'customer'
-    });
-  };
+    setIsLoading(true);
+    setError('');
 
-  const quickAdminLogin = () => {
-    onLogin({
-      id: 'admin-1',
-      email: 'admin@upoharluxe.com',
-      name: 'Admin Manager',
-      role: 'admin'
-    });
+    // Fetch current state to check users
+    const state = await getDb();
+    const user = state.adminUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+
+    if (user) {
+      onLogin(user);
+    } else {
+      setError('Invalid digital credentials detected. Access denied.');
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-md mx-auto py-24 px-4">
-      <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200 border border-slate-100">
-        <div className="text-center mb-10">
-          <h2 className="text-4xl font-serif font-bold text-slate-900 mb-2">Welcome Back</h2>
-          <p className="text-slate-500">Sign in to your premium account</p>
+    <div className="max-w-md mx-auto py-24 px-4 animate-in fade-in slide-in-from-bottom-5 duration-700">
+      <div className="bg-white rounded-[3.5rem] p-12 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] border border-slate-100 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-rose-600"></div>
+        
+        <div className="text-center mb-12">
+          <div className="w-16 h-16 bg-slate-900 text-white rounded-3xl flex items-center justify-center text-3xl font-black italic mx-auto mb-6 shadow-2xl shadow-slate-900/20">U</div>
+          <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none mb-3">Gateway<span className="text-rose-600 italic">Luxe</span></h2>
+          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.4em]">Corporate Access Terminal</p>
         </div>
         
+        {error && (
+          <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 animate-shake">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <p className="text-[10px] font-black uppercase tracking-widest">{error}</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Email Address</label>
-            <input 
-              required
-              type="email"
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-rose-800/20 focus:border-rose-800 transition-all font-medium"
-              placeholder="name@example.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Digital Identity (Email)</label>
+            <div className="relative">
+              <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+              <input 
+                required
+                type="email"
+                className="w-full pl-14 pr-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all font-bold text-sm"
+                placeholder="name@upoharluxe.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+            </div>
           </div>
 
-          <label className="flex items-center gap-3 cursor-pointer p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-rose-200 transition-colors">
-            <input 
-              type="checkbox" 
-              checked={isAdmin}
-              onChange={e => setIsAdmin(e.target.checked)}
-              className="w-5 h-5 rounded border-slate-300 text-rose-800 focus:ring-rose-800"
-            />
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-900">Login as Administrator</span>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider">Full Access to Dashboard</span>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Secret Key (Password)</label>
+            <div className="relative">
+              <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+              <input 
+                required
+                type="password"
+                className="w-full pl-14 pr-8 py-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all font-bold text-sm"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
             </div>
-          </label>
+          </div>
 
           <button 
             type="submit"
-            className="w-full py-4 bg-slate-900 text-white rounded-full font-bold text-lg shadow-xl shadow-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+            disabled={isLoading}
+            className="w-full py-6 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-[0.3em] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4 hover:bg-rose-600"
           >
-            Sign In <ArrowRight className="w-5 h-5" />
+            {isLoading ? 'Verifying...' : 'Unlock Terminal'} <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="relative my-10">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest"><span className="bg-white px-4 text-slate-400">Quick Access</span></div>
+        <div className="mt-12 pt-10 border-t border-slate-50 flex items-center justify-center gap-2 text-slate-400">
+           <ShieldCheck className="w-4 h-4" />
+           <p className="text-[9px] font-black uppercase tracking-widest">Secured by Biometric Encryption</p>
         </div>
-
-        <button 
-          onClick={quickAdminLogin}
-          className="w-full py-4 border-2 border-rose-800 text-rose-800 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-rose-50 transition-colors"
-        >
-          <ShieldCheck className="w-5 h-5" /> Quick Admin Login
-        </button>
-
-        <p className="mt-10 text-center text-xs text-slate-400">
-          First time here? <button className="text-rose-800 font-bold hover:underline">Create an account</button>
-        </p>
       </div>
+      
+      <p className="text-center mt-10 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+         Forgot access code? <button className="text-rose-600 hover:underline">Contact System Admin</button>
+      </p>
     </div>
   );
 };

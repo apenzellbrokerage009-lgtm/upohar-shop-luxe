@@ -25,11 +25,14 @@ export interface Category {
   image?: string;
 }
 
+export type UserRole = 'admin' | 'customer' | 'call_center' | 'packaging';
+
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'customer';
+  role: UserRole;
+  password?: string;
   avatar?: string;
 }
 
@@ -188,14 +191,12 @@ export interface CustomLandingPage {
   createdAt: string;
 }
 
-// Added missing CourierProfile interface
 export interface CourierProfile {
   courier: string;
   total_orders: number;
   total_success: number;
 }
 
-// Added missing CourierStats interface
 export interface CourierStats {
   phone: string;
   couriers: CourierProfile[];
@@ -215,6 +216,7 @@ export interface AppState {
   incompleteOrders: IncompleteOrder[];
   expenses: Expense[];
   employees: Employee[];
+  adminUsers: User[];
   attendance: any[];
   payroll: any[];
   blogPosts: any[];

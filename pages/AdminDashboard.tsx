@@ -1,11 +1,11 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { AppState, CourierStats, Order, IncompleteOrder } from '../types';
+import { AppState, CourierStats, Order, IncompleteOrder, UserRole } from '../types';
 import { 
   Calculator, ShoppingBag, UserCheck, Package, FolderTree, 
   Wallet, Users, Palette, PanelTop, Layout, Settings, 
   Clock, Receipt, AlertCircle, TrendingUp, Printer, ShieldAlert, Cpu, CheckCircle2, XCircle, Edit, FileText, Download, Save, PhoneCall, CheckCircle, Ban, Truck, Search, Filter, Eye, Globe, Trash2, Send, ExternalLink,
-  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap
+  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks
 } from 'lucide-react';
 import { checkCustomerReliability } from '../courierService';
 import { dispatchToSteadfast, dispatchToPathao } from '../courierIntegrationService';
@@ -25,6 +25,18 @@ import LandingPageStudio from '../components/admin/LandingPageStudio';
 import MenuStudio from '../components/admin/MenuStudio';
 import PagesModule from '../components/admin/PagesModule';
 import CustomLandingBuilder from '../components/admin/CustomLandingBuilder';
+import PackagingManifest from '../components/admin/PackagingManifest';
+
+// Fix: Defined statusMap to resolve reference errors
+const statusMap: Record<string, { label: string, color: string, ring: string }> = {
+  pending: { label: 'Pending', color: 'text-amber-600', ring: 'ring-amber-100' },
+  processing: { label: 'Confirmed', color: 'text-emerald-600', ring: 'ring-emerald-100' },
+  shipped: { label: 'Shipped', color: 'text-blue-600', ring: 'ring-blue-100' },
+  delivered: { label: 'Delivered', color: 'text-slate-900', ring: 'ring-slate-100' },
+  cancelled: { label: 'Cancelled', color: 'text-rose-600', ring: 'ring-rose-100' },
+  call_not_received: { label: 'No Answer', color: 'text-purple-600', ring: 'ring-purple-100' },
+  partial: { label: 'Partial', color: 'text-orange-600', ring: 'ring-orange-100' }
+};
 
 interface AdminProps {
   state: AppState;
@@ -32,7 +44,8 @@ interface AdminProps {
 }
 
 const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const userRole = state.currentUser?.role || 'admin';
+  const [activeTab, setActiveTab] = useState(userRole === 'packaging' ? 'packaging' : 'dashboard');
   const [orderFilter, setOrderFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [courierLoading, setCourierLoading] = useState<string | null>(null);
@@ -45,7 +58,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
-  // Reset courier result when order changes to avoid stale data display
   useEffect(() => {
     setCourierResult(null);
   }, [selectedOrder?.id]);
@@ -93,7 +105,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
 
   const handleBulkStatusUpdate = (newStatus: Order['status']) => {
     if (selectedOrderIds.length === 0) return;
-    
     setState(prev => ({
       ...prev,
       orders: prev.orders.map(o => 
@@ -101,7 +112,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       )
     }));
     setSelectedOrderIds([]);
-    alert(`Updated ${selectedOrderIds.length} orders to ${newStatus}`);
   };
 
   const handleBulkDispatch = async (courier: 'steadfast' | 'pathao') => {
@@ -111,19 +121,13 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
 
     setIsBulkProcessing(true);
     let successCount = 0;
-    let failCount = 0;
-
     for (const id of selectedOrderIds) {
       const order = state.orders.find(o => o.id === id);
       if (!order) continue;
-
       try {
         let result;
-        if (courier === 'steadfast') {
-          result = await dispatchToSteadfast(order, state.steadfast);
-        } else {
-          result = await dispatchToPathao(order, state.pathao);
-        }
+        if (courier === 'steadfast') result = await dispatchToSteadfast(order, state.steadfast);
+        else result = await dispatchToPathao(order, state.pathao);
         
         if (result.success) {
           successCount++;
@@ -132,15 +136,11 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
             orders: prev.orders.map(o => o.id === id ? { ...o, status: 'shipped' } : o)
           }));
         }
-      } catch (err) {
-        console.error(`Failed to dispatch order ${id}:`, err);
-        failCount++;
-      }
+      } catch (err) {}
     }
-
     setIsBulkProcessing(false);
     setSelectedOrderIds([]);
-    alert(`Bulk Dispatch Complete!\nSuccess: ${successCount}\nFailed: ${failCount}`);
+    alert(`Bulk Dispatch Complete! Success: ${successCount}`);
   };
 
   const handleCourierCheck = async (phone: string) => {
@@ -150,7 +150,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       const result = await checkCustomerReliability(phone);
       setCourierResult(result);
     } catch (error) {
-      console.error("Courier Check Error", error);
     } finally {
       setIsCheckingCourier(false);
     }
@@ -158,9 +157,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
 
   const handlePrint = (mode: 'invoice' | 'slip') => {
     setPrintMode(mode);
-    setTimeout(() => {
-      window.print();
-    }, 300);
+    setTimeout(() => window.print(), 300);
   };
 
   const handleDispatch = async (courier: 'steadfast' | 'pathao') => {
@@ -168,14 +165,10 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
     setCourierLoading(courier);
     try {
       let result;
-      if (courier === 'steadfast') {
-        result = await dispatchToSteadfast(selectedOrder, state.steadfast);
-      } else {
-        result = await dispatchToPathao(selectedOrder, state.pathao);
-      }
+      if (courier === 'steadfast') result = await dispatchToSteadfast(selectedOrder, state.steadfast);
+      else result = await dispatchToPathao(selectedOrder, state.pathao);
       
       if (result.success) {
-        alert(`Successfully dispatched to ${courier}! Tracking: ${result.trackingCode}`);
         const updatedOrder = { ...selectedOrder, status: 'shipped' as const };
         setState(prev => ({
           ...prev,
@@ -201,7 +194,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
   };
 
   const handleConfirmOrder = (order: Order) => {
-    // If pending, move to processing (confirmed)
     const updated = { ...order, status: 'processing' as const };
     setState(prev => ({
       ...prev,
@@ -211,74 +203,58 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
   };
 
   const handleConvertLead = (lead: IncompleteOrder) => {
-    if (!lead) return;
     const subtotal = lead.items.reduce((acc, item) => acc + ((item.price || 0) * (item.quantity || 1)), 0);
     const orderId = 'REC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-    
     const newOrder: Order = {
-      id: orderId,
-      customerName: lead.customerName,
-      customerPhone: lead.customerPhone,
-      items: lead.items,
-      deliveryCharge: 60,
-      total: subtotal + 60,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      shippingAddress: 'Recovered Lead - Update Address'
+      id: orderId, customerName: lead.customerName, customerPhone: lead.customerPhone,
+      items: lead.items, deliveryCharge: 60, total: subtotal + 60, status: 'pending',
+      createdAt: new Date().toISOString(), shippingAddress: 'Recovered Lead'
     };
-
     setState(prev => ({
       ...prev,
       orders: [newOrder, ...prev.orders],
       incompleteOrders: prev.incompleteOrders.filter(o => o.id !== lead.id)
     }));
-    
-    alert(`Success! Lead converted to Order #${orderId}`);
   };
 
-  const handleCancelLead = (id: string) => {
-    if(confirm("Discard this abandoned lead fragment?")) {
-      setState(prev => ({ ...prev, incompleteOrders: prev.incompleteOrders.filter(o => o.id !== id) }));
-    }
-  };
+  // ROLE-BASED NAVIGATION LOGIC
+  const navGroups = useMemo(() => {
+    const groups = [
+      { label: 'Strategy', roles: ['admin'], items: [{ id: 'dashboard', label: 'Admin Overview', icon: BarChart3 }] },
+      { label: 'Operations', roles: ['admin', 'call_center'], items: [
+        { id: 'pos', label: 'POS Terminal', icon: Calculator, roles: ['admin'] },
+        { id: 'orders', label: 'Order Stream', icon: ShoppingBag, count: state.orders.length },
+        { id: 'leads', label: 'Lead Recovery', icon: UserCheck, count: state.incompleteOrders.length },
+        { id: 'courier-checker', label: 'Courier Checker', icon: SearchCode },
+      ]},
+      { label: 'Logistics', roles: ['admin', 'packaging'], items: [
+        { id: 'packaging', label: 'Pack Manifest', icon: ListChecks },
+        { id: 'inventory', label: 'Inventory Access', icon: Package, roles: ['admin', 'packaging'] },
+      ]},
+      { label: 'Content & Branding', roles: ['admin'], items: [
+        { id: 'custom-builder', label: 'Landing Studio', icon: Zap },
+        { id: 'landing-studio', label: 'Hero Studio', icon: Layout },
+        { id: 'menu-studio', label: 'Menu Matrix', icon: MenuIcon },
+        { id: 'pages', label: 'Custom Pages', icon: FileEdit },
+        { id: 'header-design', label: 'Header Studio', icon: PanelTop },
+        { id: 'footer-design', label: 'Footer Studio', icon: Layout },
+        { id: 'design-studio', label: 'Visual Engine', icon: Palette },
+      ]},
+      { label: 'Asset Management', roles: ['admin'], items: [
+        { id: 'categories', label: 'Collections', icon: FolderTree },
+      ]},
+      { label: 'Intelligence', roles: ['admin'], items: [
+        { id: 'accounts', label: 'Financials', icon: Wallet },
+        { id: 'hrm', label: 'Personnel & Access', icon: Users },
+        { id: 'integrations', label: 'Integrations', icon: Cpu },
+      ]}
+    ];
 
-  const statusMap: Record<string, { label: string, color: string, ring: string }> = {
-    pending: { label: 'Pending', color: 'bg-blue-50 text-blue-600', ring: 'ring-blue-100' },
-    processing: { label: 'Confirmed', color: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-100' },
-    call_not_received: { label: 'No Answer', color: 'bg-amber-50 text-amber-600', ring: 'ring-amber-100' },
-    shipped: { label: 'Shipped', color: 'bg-indigo-50 text-indigo-600', ring: 'ring-indigo-100' },
-    delivered: { label: 'Delivered', color: 'bg-green-50 text-green-600', ring: 'ring-green-100' },
-    cancelled: { label: 'Cancelled', color: 'bg-rose-50 text-rose-600', ring: 'ring-rose-100' },
-    partial: { label: 'Partial', color: 'bg-purple-50 text-purple-600', ring: 'ring-purple-100' },
-  };
-
-  const navGroups = [
-    { label: 'Strategy', items: [{ id: 'dashboard', label: 'Admin Overview', icon: BarChart3 }] },
-    { label: 'Operations', items: [
-      { id: 'pos', label: 'POS Terminal', icon: Calculator },
-      { id: 'orders', label: 'Order Stream', icon: ShoppingBag, count: state.orders.length },
-      { id: 'leads', label: 'Lead Recovery', icon: UserCheck, count: state.incompleteOrders.length },
-      { id: 'courier-checker', label: 'Courier Checker', icon: SearchCode },
-    ]},
-    { label: 'Content & Branding', items: [
-      { id: 'custom-builder', label: 'Landing Studio', icon: Zap },
-      { id: 'landing-studio', label: 'Hero Studio', icon: Layout },
-      { id: 'menu-studio', label: 'Menu Matrix', icon: MenuIcon },
-      { id: 'pages', label: 'Custom Pages', icon: FileEdit },
-      { id: 'header-design', label: 'Header Studio', icon: PanelTop },
-      { id: 'footer-design', label: 'Footer Studio', icon: Layout },
-      { id: 'design-studio', label: 'Visual Engine', icon: Palette },
-    ]},
-    { label: 'Asset Management', items: [
-      { id: 'inventory', label: 'Inventory Vault', icon: Package },
-      { id: 'categories', label: 'Collections', icon: FolderTree },
-    ]},
-    { label: 'Intelligence', items: [
-      { id: 'accounts', label: 'Financials', icon: Wallet },
-      { id: 'hrm', label: 'Personnel', icon: Users },
-      { id: 'integrations', label: 'Integrations', icon: Cpu },
-    ]}
-  ];
+    return groups.filter(g => g.roles.includes(userRole)).map(g => ({
+      ...g,
+      items: g.items.filter(i => !i.roles || i.roles.includes(userRole))
+    }));
+  }, [userRole, state.orders.length, state.incompleteOrders.length]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-inter selection:bg-rose-100 selection:text-rose-900">
@@ -289,7 +265,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
             <div className="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center text-white font-black italic shadow-[0_0_20px_rgba(225,29,72,0.4)]">U</div>
             <div>
               <h1 className="text-white font-black tracking-tighter text-xl uppercase leading-none">Console<span className="text-rose-500 italic">Luxe</span></h1>
-              <p className="text-[9px] text-slate-500 font-black tracking-[0.3em] uppercase mt-2">v6.5 Enterprise</p>
+              <p className="text-[9px] text-slate-500 font-black tracking-[0.3em] uppercase mt-2">{userRole.replace('_', ' ')} Terminal</p>
             </div>
           </div>
           <nav className="space-y-8 overflow-y-auto max-h-[calc(100vh-200px)] scrollbar-hide">
@@ -314,21 +290,31 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       <main className="flex-grow pl-80 min-h-screen bg-slate-50 no-print">
         <header className="sticky top-0 z-[90] bg-white/80 backdrop-blur-xl border-b border-slate-100 px-16 py-8 flex justify-between items-center shadow-sm">
            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-1">Infrastructure / {activeTab.replace('-', ' ')}</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-1">Upohar Luxe / {activeTab.replace('-', ' ')}</p>
               <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900">{activeTab.replace('-', ' ')}</h2>
            </div>
            <div className="flex items-center gap-8">
-              <div className="text-right">
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Revenue</p>
-                 <p className="text-2xl font-black text-emerald-600 tracking-tighter">{businessStats.revenue.toLocaleString()}৳</p>
-              </div>
+              {userRole === 'admin' && (
+                <div className="text-right">
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Revenue</p>
+                   <p className="text-2xl font-black text-emerald-600 tracking-tighter">{businessStats.revenue.toLocaleString()}৳</p>
+                </div>
+              )}
               <div className="w-px h-10 bg-slate-200"></div>
-              <button className="w-12 h-12 bg-slate-950 text-white rounded-2xl flex items-center justify-center hover:bg-rose-600 transition-all shadow-lg"><Settings className="w-5 h-5" /></button>
+              <div className="flex items-center gap-3">
+                 <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-900 uppercase">{state.currentUser?.name}</p>
+                    <p className="text-[8px] font-black text-rose-600 uppercase tracking-widest">{userRole.replace('_', ' ')}</p>
+                 </div>
+                 <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-xs font-black">
+                    {state.currentUser?.name?.charAt(0)}
+                 </div>
+              </div>
            </div>
         </header>
 
         <div className="p-16 max-w-[1600px] mx-auto space-y-12">
-          {activeTab === 'dashboard' && (
+          {activeTab === 'dashboard' && userRole === 'admin' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
                <div className="grid grid-cols-4 gap-8">
                   {[
@@ -364,6 +350,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
           {activeTab === 'menu-studio' && <MenuStudio state={state} setState={setState} />}
           {activeTab === 'pages' && <PagesModule state={state} setState={setState} />}
           {activeTab === 'custom-builder' && <CustomLandingBuilder state={state} setState={setState} />}
+          {activeTab === 'packaging' && <PackagingManifest state={state} setState={setState} />}
           
           {activeTab === 'orders' && (
              <div className="space-y-10 animate-in fade-in duration-500 pb-32">
@@ -449,14 +436,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                            </tr>
                          )) : (
                            <tr>
-                              <td colSpan={6} className="px-12 py-32 text-center">
-                                 <div className="flex flex-col items-center">
-                                    <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-6">
-                                       <ShoppingBag className="w-8 h-8 text-slate-200" />
-                                    </div>
-                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">No matching transactions found</p>
-                                 </div>
-                              </td>
+                              <td colSpan={6} className="px-12 py-32 text-center text-slate-300 font-black uppercase tracking-[0.4em] text-[10px]">No matching transactions found</td>
                            </tr>
                          )}
                       </tbody>
@@ -464,7 +444,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                 </div>
 
                 {/* Floating Bulk Action Bar */}
-                {selectedOrderIds.length > 0 && (
+                {selectedOrderIds.length > 0 && userRole !== 'packaging' && (
                   <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-slate-950/95 backdrop-blur-2xl px-10 py-6 rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.5)] flex items-center gap-10 animate-in slide-in-from-bottom-10 duration-500 min-w-max">
                     <div className="flex items-center gap-4 border-r border-white/10 pr-10">
                       <div className="w-10 h-10 bg-rose-600 text-white rounded-2xl flex items-center justify-center font-black text-sm shadow-2xl">{selectedOrderIds.length}</div>
@@ -489,25 +469,27 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 border-l border-white/10 pl-10">
-                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mr-2">Dispatch Courier:</p>
-                      <div className="flex gap-3">
-                        <button 
-                          disabled={isBulkProcessing}
-                          onClick={() => handleBulkDispatch('steadfast')}
-                          className="px-6 py-3 bg-rose-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2"
-                        >
-                          {isBulkProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Send className="w-3 h-3"/>} Steadfast
-                        </button>
-                        <button 
-                          disabled={isBulkProcessing}
-                          onClick={() => handleBulkDispatch('pathao')}
-                          className="px-6 py-3 bg-orange-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all flex items-center gap-2"
-                        >
-                          {isBulkProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Truck className="w-3 h-3"/>} Pathao
-                        </button>
+                    {userRole === 'admin' && (
+                      <div className="flex items-center gap-4 border-l border-white/10 pl-10">
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mr-2">Dispatch Courier:</p>
+                        <div className="flex gap-3">
+                          <button 
+                            disabled={isBulkProcessing}
+                            onClick={() => handleBulkDispatch('steadfast')}
+                            className="px-6 py-3 bg-rose-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2"
+                          >
+                            {isBulkProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Send className="w-3 h-3"/>} Steadfast
+                          </button>
+                          <button 
+                            disabled={isBulkProcessing}
+                            onClick={() => handleBulkDispatch('pathao')}
+                            className="px-6 py-3 bg-orange-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all flex items-center gap-2"
+                          >
+                            {isBulkProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Truck className="w-3 h-3"/>} Pathao
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <button onClick={() => setSelectedOrderIds([])} className="p-3 text-slate-500 hover:text-white transition-colors">
                       <XCircle className="w-5 h-5"/>
@@ -550,7 +532,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                               >
                                 <RefreshCw className="w-4 h-4" /> Recover Session
                               </button>
-                              <button onClick={() => handleCancelLead(o.id)} className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                              <button onClick={() => setState(prev => ({ ...prev, incompleteOrders: prev.incompleteOrders.filter(lead => lead.id !== o.id) }))} className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
                             </div>
                            </td>
                         </tr>
@@ -564,13 +546,12 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
         </div>
       </main>
 
-      {/* MASTER ORDER DETAIL MODAL */}
+      {/* MASTER ORDER DETAIL MODAL - RESTRICTED ACTIONS BASED ON ROLE */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-0 md:p-8 overflow-hidden">
           <div className="absolute inset-0 bg-slate-950/98 backdrop-blur-3xl animate-in fade-in duration-500 no-print" onClick={() => setSelectedOrder(null)}></div>
           <div className="relative bg-white w-full max-w-7xl h-full md:h-auto md:max-h-[95vh] rounded-none md:rounded-[4.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-in zoom-in slide-in-from-bottom duration-500 flex flex-col border border-white/10">
              
-             {/* Modal Header */}
              <div className="flex justify-between items-center px-12 md:px-16 py-8 md:py-12 border-b border-slate-50 bg-white/50 backdrop-blur-md sticky top-0 z-[10] no-print">
                 <div className="flex items-center gap-4 md:gap-8">
                    <div className="w-12 h-12 md:w-16 md:h-16 bg-rose-600 text-white rounded-2xl md:rounded-3xl flex items-center justify-center text-2xl md:text-3xl font-black italic shadow-2xl shadow-rose-600/30">U</div>
@@ -587,16 +568,12 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                    <button onClick={() => handlePrint('invoice')} className="px-4 md:px-8 py-3 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest flex items-center gap-2 md:gap-3 hover:bg-emerald-700 transition-all shadow-lg active:scale-95">
                      <Printer className="w-4 h-4 md:w-5 md:h-5"/> <span className="hidden sm:inline">Print Invoice</span>
                    </button>
-                   <button onClick={() => handlePrint('slip')} className="px-4 md:px-8 py-3 md:py-4 bg-blue-600 text-white rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest flex items-center gap-2 md:gap-3 hover:bg-blue-700 transition-all shadow-lg active:scale-95">
-                     <Scissors className="w-4 h-4 md:w-5 md:h-5"/> <span className="hidden sm:inline">Courier Slip</span>
-                   </button>
                    <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 md:w-14 md:h-14 bg-rose-50 rounded-xl md:rounded-2xl text-rose-600 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center"><XCircle className="w-5 h-5 md:w-6 md:h-6"/></button>
                 </div>
              </div>
 
              <div className="flex-grow overflow-y-auto scrollbar-hide no-print">
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 p-16">
-                  {/* Entity Information */}
                   <div className="space-y-12">
                      <div className="space-y-6">
                         <div className="flex items-center gap-3">
@@ -606,26 +583,25 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                         <div className="grid grid-cols-1 gap-6">
                            <div className="group space-y-2">
                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Recipient Identity</label>
-                              <input className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none" value={selectedOrder.customerName} onChange={e => handleUpdateOrder({ customerName: e.target.value })} />
+                              <input disabled={userRole === 'packaging'} className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none" value={selectedOrder.customerName} onChange={e => handleUpdateOrder({ customerName: e.target.value })} />
                            </div>
                            <div className="group space-y-2">
                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Digital Comms (Phone)</label>
                               <div className="flex gap-3">
-                                 <input className="flex-grow px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none" value={selectedOrder.customerPhone} onChange={e => handleUpdateOrder({ customerPhone: e.target.value })} />
-                                 <button onClick={() => handleCourierCheck(selectedOrder.customerPhone)} className="w-16 bg-slate-950 text-white rounded-[1.5rem] flex items-center justify-center transition-all hover:bg-rose-600">
+                                 <input disabled={userRole === 'packaging'} className="flex-grow px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none" value={selectedOrder.customerPhone} onChange={e => handleUpdateOrder({ customerPhone: e.target.value })} />
+                                 {userRole !== 'packaging' && <button onClick={() => handleCourierCheck(selectedOrder.customerPhone)} className="w-16 bg-slate-950 text-white rounded-[1.5rem] flex items-center justify-center transition-all hover:bg-rose-600">
                                     {isCheckingCourier ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Search className="w-4 h-4"/>}
-                                 </button>
+                                 </button>}
                               </div>
                            </div>
                            <div className="group space-y-2">
                               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Shipping Destination</label>
-                              <textarea className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none h-40 resize-none" value={selectedOrder.shippingAddress} onChange={e => handleUpdateOrder({ shippingAddress: e.target.value })} />
+                              <textarea disabled={userRole === 'packaging'} className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none h-40 resize-none" value={selectedOrder.shippingAddress} onChange={e => handleUpdateOrder({ shippingAddress: e.target.value })} />
                            </div>
                         </div>
                      </div>
                   </div>
 
-                  {/* Operational Flow */}
                   <div className="space-y-12 lg:border-x lg:border-slate-50 lg:px-16">
                      <div className="space-y-6">
                         <div className="flex items-center gap-3">
@@ -665,14 +641,13 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
 
                         <div className="space-y-2">
                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Operational State</label>
-                           <select className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm appearance-none cursor-pointer" value={selectedOrder.status} onChange={e => handleUpdateOrder({ status: e.target.value as any })}>
+                           <select disabled={userRole === 'packaging'} className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none appearance-none cursor-pointer" value={selectedOrder.status} onChange={e => handleUpdateOrder({ status: e.target.value as any })}>
                              {Object.keys(statusMap).map(key => <option key={key} value={key}>{statusMap[key].label}</option>)}
                            </select>
                         </div>
                      </div>
                   </div>
 
-                  {/* External Integrations */}
                   <div className="space-y-12">
                      <div className="space-y-6">
                         <div className="flex items-center gap-3">
@@ -680,71 +655,54 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Logistics Integration</h4>
                         </div>
                         
-                        {/* Courier Score Card */}
                         {courierResult ? (
-                          <div className={`p-10 rounded-[3rem] border animate-in slide-in-from-top-4 duration-500 relative overflow-hidden group ${courierResult.isRisk ? 'bg-rose-950 text-rose-100 border-rose-800' : 'bg-emerald-950 text-emerald-100 border-emerald-800'}`}>
-                             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+                          <div className={`p-10 rounded-[3rem] border animate-in slide-in-from-top-4 duration-500 relative overflow-hidden group ${courierResult.isRisk ? 'bg-rose-950 text-rose-100 border-rose-800 shadow-2xl shadow-rose-900/40' : 'bg-emerald-950 text-emerald-100 border-emerald-800 shadow-2xl shadow-emerald-900/40'}`}>
+                             <div className="absolute top-0 right-0 p-8 opacity-10">
                                 <ShieldAlert className="w-32 h-32" />
                              </div>
                              <div className="relative z-10">
-                                <div className="flex justify-between items-center mb-8">
-                                   <div>
-                                      <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${courierResult.isRisk ? 'text-rose-400' : 'text-emerald-400'}`}>Trust Rating</p>
-                                      <h5 className="text-4xl font-black tracking-tighter mt-1">{Math.round(courierResult.successRate)}%</h5>
-                                   </div>
-                                </div>
-                                <div className="p-4 bg-white/5 rounded-2xl text-[9px] font-bold leading-relaxed italic opacity-80 mb-4">
-                                   {courierResult.history}
-                                </div>
-                                <div className={`px-6 py-4 rounded-2xl text-[10px] font-black uppercase text-center tracking-widest border ${courierResult.isRisk ? 'bg-rose-600 border-rose-500' : 'bg-emerald-600 border-emerald-500'}`}>
-                                   {courierResult.isRisk ? 'CRITICAL RISK - ADVANCE REQUIRED' : 'SECURE ENTITY - PROCEED'}
-                                </div>
+                                <h5 className="text-4xl font-black tracking-tighter mt-1">{Math.round(courierResult.successRate)}% Trust</h5>
+                                <div className="p-4 bg-white/5 rounded-2xl text-[9px] font-bold leading-relaxed italic opacity-80 mb-4">{courierResult.history}</div>
                              </div>
                           </div>
                         ) : (
-                          <div className="p-10 rounded-[3rem] border border-slate-100 bg-slate-50 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white transition-all" onClick={() => handleCourierCheck(selectedOrder.customerPhone)}>
+                          <div className="p-10 rounded-[3rem] border border-slate-100 bg-slate-50 flex flex-col items-center justify-center text-center">
                              <ShieldAlert className="w-8 h-8 text-slate-200 mb-2" />
                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Verify history</p>
                           </div>
                         )}
 
-                        <div className="grid grid-cols-1 gap-6">
-                           <button disabled={!!courierLoading || !state.steadfast.isEnabled} onClick={() => handleDispatch('steadfast')} className="w-full py-5 bg-rose-600 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-30">
-                              {courierLoading === 'steadfast' ? <RefreshCw className="animate-spin w-4 h-4"/> : <Send className="w-4 h-4"/>} Dispatch Steadfast
-                           </button>
-                           <button disabled={!!courierLoading || !state.pathao.isEnabled} onClick={() => handleDispatch('pathao')} className="w-full py-5 bg-orange-600 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-30">
-                              {courierLoading === 'pathao' ? <RefreshCw className="animate-spin w-4 h-4"/> : <Truck className="w-4 h-4"/>} Dispatch Pathao
-                           </button>
-                        </div>
+                        {userRole === 'admin' && (
+                          <div className="grid grid-cols-1 gap-6">
+                             <button disabled={!!courierLoading || !state.steadfast.isEnabled} onClick={() => handleDispatch('steadfast')} className="w-full py-5 bg-rose-600 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-30">
+                                {courierLoading === 'steadfast' ? <RefreshCw className="animate-spin w-4 h-4"/> : <Send className="w-4 h-4"/>} Dispatch Steadfast
+                             </button>
+                          </div>
+                        )}
                      </div>
                   </div>
                </div>
              </div>
 
-             {/* Modal Footer Controls */}
              <div className="px-16 py-10 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-8 no-print bg-white/50 backdrop-blur-md">
-                <div className="flex gap-4 w-full md:w-auto">
-                   <button onClick={() => handlePrint('invoice')} className="flex-grow md:flex-none px-12 py-6 border-2 border-slate-900 rounded-full font-black uppercase text-xs tracking-[0.3em] flex items-center justify-center gap-6 hover:bg-slate-950 hover:text-white transition-all">
+                <div className="flex gap-4">
+                   <button onClick={() => handlePrint('invoice')} className="px-12 py-6 border-2 border-slate-900 rounded-full font-black uppercase text-xs tracking-[0.3em] flex items-center justify-center gap-6 hover:bg-slate-950 hover:text-white transition-all">
                       <Printer className="w-6 h-6" /> Invoice
                    </button>
-                   <button onClick={() => handlePrint('slip')} className="flex-grow md:flex-none px-12 py-6 border-2 border-blue-600 text-blue-600 rounded-full font-black uppercase text-xs tracking-[0.3em] flex items-center justify-center gap-6 hover:bg-blue-600 hover:text-white transition-all">
-                      <Scissors className="w-6 h-6" /> Courier Slip
-                   </button>
                 </div>
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                   {selectedOrder.status === 'pending' ? (
-                     <button onClick={() => handleConfirmOrder(selectedOrder)} className="flex-grow md:flex-none px-20 py-6 bg-emerald-600 text-white rounded-full font-black text-xs uppercase tracking-[0.5em] hover:bg-emerald-700 transition-all shadow-2xl flex items-center justify-center gap-3">
+                <div className="flex items-center gap-4">
+                   {selectedOrder.status === 'pending' && userRole !== 'packaging' ? (
+                     <button onClick={() => handleConfirmOrder(selectedOrder)} className="px-20 py-6 bg-emerald-600 text-white rounded-full font-black text-xs uppercase tracking-[0.5em] hover:bg-emerald-700 transition-all shadow-2xl flex items-center justify-center gap-3">
                         <CheckCircle className="w-5 h-5"/> OK / Confirm Order
                      </button>
                    ) : (
-                     <button onClick={() => setSelectedOrder(null)} className="flex-grow md:flex-none px-20 py-6 bg-slate-950 text-white rounded-full font-black text-xs uppercase tracking-[0.5em] hover:bg-rose-600 transition-all shadow-2xl flex items-center justify-center gap-3">
+                     <button onClick={() => setSelectedOrder(null)} className="px-20 py-6 bg-slate-950 text-white rounded-full font-black text-xs uppercase tracking-[0.5em] hover:bg-rose-600 transition-all shadow-2xl flex items-center justify-center gap-3">
                         <Check className="w-5 h-5"/> OK / Done
                      </button>
                    )}
                 </div>
              </div>
 
-             {/* PRINT LAYOUTS (Hidden normally, shown during print) */}
              <div className="hidden print:block absolute inset-0 bg-white" id="master-print-container">
                 {printMode === 'invoice' ? (
                   <div className="p-20 w-full" id="invoice-print">
@@ -758,112 +716,27 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                           <p className="text-sm font-black mt-2 uppercase text-slate-400 tracking-widest">Master ID: #{selectedOrder.id}</p>
                        </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-24 mb-24">
-                       <div className="space-y-6">
-                          <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] mb-4">Constituent Target</p>
-                          <div className="space-y-2">
-                            <p className="text-3xl font-black text-slate-950 uppercase">{selectedOrder.customerName}</p>
-                            <p className="text-xl font-bold text-slate-500">{selectedOrder.customerPhone}</p>
-                          </div>
-                          <div className="pt-6 space-y-2">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Protocol Address</p>
-                            <p className="text-base text-slate-900 leading-relaxed font-bold italic">{selectedOrder.shippingAddress}</p>
-                          </div>
-                       </div>
-                       <div className="text-right space-y-10">
-                          <div>
-                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] mb-4">Chronology</p>
-                            <p className="text-lg font-black uppercase text-slate-950">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
-                          </div>
-                          <div className="pt-6">
-                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] mb-4">Liabilities Method</p>
-                            <p className="text-lg font-black text-rose-600 uppercase">Cash on Delivery Authorized</p>
-                          </div>
+                    <div className="grid grid-cols-2 gap-24 mb-24 text-slate-900 font-bold uppercase">
+                       <div>
+                          <p className="text-[11px] font-black text-slate-400 mb-4">Constituent Target</p>
+                          <p className="text-3xl">{selectedOrder.customerName}</p>
+                          <p className="text-xl">{selectedOrder.customerPhone}</p>
+                          <p className="mt-6 text-base italic">{selectedOrder.shippingAddress}</p>
                        </div>
                     </div>
-
                     <table className="w-full mb-24 border-collapse">
-                       <thead>
-                          <tr className="border-b-4 border-slate-950">
-                             <th className="py-8 text-[12px] font-black text-slate-400 uppercase text-left tracking-widest">Asset Classification</th>
-                             <th className="py-8 text-[12px] font-black text-slate-400 uppercase text-center tracking-widest">Quantity</th>
-                             <th className="py-8 text-[12px] font-black text-slate-400 uppercase text-right tracking-widest">Unit Liability</th>
-                             <th className="py-8 text-[12px] font-black text-slate-400 uppercase text-right tracking-widest">Total Liability</th>
-                          </tr>
-                       </thead>
+                       <thead><tr className="border-b-4 border-slate-950"><th className="py-8 text-left uppercase">Asset Classification</th><th className="py-8 text-center uppercase">Quantity</th><th className="py-8 text-right uppercase">Unit Liability</th><th className="py-8 text-right uppercase">Total Liability</th></tr></thead>
                        <tbody className="divide-y-2 divide-slate-100">
                           {selectedOrder.items.map((item, idx) => (
-                            <tr key={idx}>
-                               <td className="py-10">
-                                  <p className="font-black text-slate-950 text-lg uppercase">{state.products.find(p => p.id === item.productId)?.name || 'Premium Asset'}</p>
-                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Luxe SKU Identified</p>
-                               </td>
-                               <td className="py-10 text-center font-black text-xl">{item.quantity}</td>
-                               <td className="py-10 text-right font-black text-lg">{item.price.toLocaleString()}৳</td>
-                               <td className="py-10 text-right font-black text-xl text-slate-950">{(item.price * item.quantity).toLocaleString()}৳</td>
-                            </tr>
+                            <tr key={idx}><td className="py-10 text-lg uppercase">{state.products.find(p => p.id === item.productId)?.name}</td><td className="py-10 text-center text-xl">{item.quantity}</td><td className="py-10 text-right">{item.price}৳</td><td className="py-10 text-right text-xl">{item.price * item.quantity}৳</td></tr>
                           ))}
                        </tbody>
                     </table>
-
-                    <div className="flex justify-end">
-                       <div className="w-[450px] space-y-6">
-                          <div className="flex justify-between text-[12px] font-black text-slate-400 uppercase tracking-[0.3em]">
-                             <span>Sub-Total Liability</span>
-                             <span className="text-slate-950">{(selectedOrder.total - selectedOrder.deliveryCharge).toLocaleString()}৳</span>
-                          </div>
-                          <div className="flex justify-between text-[12px] font-black text-slate-400 uppercase tracking-[0.3em]">
-                             <span>Logistics Surcharge</span>
-                             <span className="text-slate-950">{selectedOrder.deliveryCharge.toLocaleString()}৳</span>
-                          </div>
-                          <div className="h-1 bg-slate-950"></div>
-                          <div className="flex justify-between items-end pt-6">
-                             <div>
-                                <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.5em]">Consolidated Total</p>
-                                <p className="text-[9px] font-black text-rose-600 uppercase tracking-[0.2em] mt-1">Authorized for Dispatch</p>
-                             </div>
-                             <p className="text-7xl font-black text-slate-950 tracking-tighter">{selectedOrder.total.toLocaleString()}৳</p>
-                          </div>
-                       </div>
+                    <div className="flex justify-end pt-12 border-t-4 border-slate-950">
+                       <p className="text-7xl font-black tracking-tighter">{selectedOrder.total.toLocaleString()}৳</p>
                     </div>
                   </div>
-                ) : (
-                  <div className="p-8 w-[400px] border-2 border-black border-dashed mx-auto" id="slip-print">
-                    <div className="text-center border-b-2 border-black pb-4 mb-4">
-                       <h1 className="text-2xl font-black uppercase tracking-widest">Upohar Luxe</h1>
-                       <p className="text-[10px] font-bold uppercase tracking-widest">Premium Gifting Protocol</p>
-                    </div>
-                    <div className="space-y-4 mb-6">
-                       <div className="flex justify-between items-center bg-black text-white px-3 py-1">
-                          <span className="text-[10px] font-black uppercase tracking-widest">Reference</span>
-                          <span className="text-sm font-black italic">#{selectedOrder.id}</span>
-                       </div>
-                       <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recipient</p>
-                          <p className="text-lg font-black uppercase">{selectedOrder.customerName}</p>
-                          <p className="text-base font-black italic">{selectedOrder.customerPhone}</p>
-                       </div>
-                       <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Address</p>
-                          <p className="text-xs font-bold leading-tight uppercase">{selectedOrder.shippingAddress}</p>
-                       </div>
-                    </div>
-                    <div className="border-t border-black pt-4 mb-4">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Item Logs</p>
-                       {selectedOrder.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between text-[10px] font-bold uppercase mb-1">
-                             <span>{item.quantity}x {state.products.find(p => p.id === item.productId)?.name || 'Asset'}</span>
-                             <span>{(item.price * item.quantity).toLocaleString()}৳</span>
-                          </div>
-                       ))}
-                    </div>
-                    <div className="bg-slate-100 p-4 border-2 border-black text-center">
-                       <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-rose-600">Total COD Collection</p>
-                       <p className="text-4xl font-black tracking-tighter">{selectedOrder.total.toLocaleString()}৳</p>
-                    </div>
-                  </div>
-                )}
+                ) : null}
              </div>
           </div>
         </div>
@@ -876,11 +749,8 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
           #root > :not(main), main > :not(.min-h-screen) { display: none !important; }
           #master-print-container { display: block !important; visibility: visible !important; position: relative !important; width: 100% !important; background: white !important; z-index: 1000000 !important; margin: 0 !important; padding: 0 !important; }
           #master-print-container * { visibility: visible !important; }
-          @page { margin: 0; size: auto; }
-          * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
         }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
     </div>
   );

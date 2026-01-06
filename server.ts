@@ -13,6 +13,7 @@ app.use(express.json() as any);
 // Initialize Gemini for backend use
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+// Fix: Added missing adminUsers property in AppState initialization
 let dbState: AppState = {
   products: INITIAL_PRODUCTS,
   categories: INITIAL_CATEGORIES,
@@ -20,6 +21,7 @@ let dbState: AppState = {
   incompleteOrders: [],
   expenses: [],
   employees: [],
+  adminUsers: [{ id: 'master-1', name: 'Master Admin', email: 'admin@upoharluxe.com', role: 'admin', password: 'admin' }],
   attendance: [],
   payroll: [],
   blogPosts: [],
@@ -34,7 +36,6 @@ let dbState: AppState = {
   pathao: { clientId: '', clientSecret: '', username: '', password: '', storeId: '', isEnabled: false },
   customPages: [],
   navMenus: [],
-  // Fix: Missing customLandings in AppState initialization
   customLandings: []
 };
 
