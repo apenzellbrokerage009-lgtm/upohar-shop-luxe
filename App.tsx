@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AppState, Product, Order, IncompleteOrder, CustomLandingPage } from './types';
+import { AppState, Product, Order, IncompleteOrder, CustomLandingPage, User } from './types';
 import { getDb, saveDb, getDefaultState } from './db';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -11,6 +11,7 @@ import CustomerDashboard from './pages/CustomerDashboard';
 import ProductPage from './pages/ProductPage';
 import LoginPage from './pages/LoginPage';
 import CustomLandingView from './pages/CustomLandingView';
+import OrderTrackingPage from './pages/OrderTrackingPage';
 import CheckoutModal from './components/CheckoutModal';
 import MobileBottomNav from './components/MobileBottomNav';
 import { tracker } from './trackingService';
@@ -22,6 +23,7 @@ const App: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedLanding, setSelectedLanding] = useState<CustomLandingPage | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   
   const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
   const [checkoutQty, setCheckoutQty] = useState(1);
@@ -82,6 +84,10 @@ const App: React.FC = () => {
         const slug = path.split('/')[1];
         const landing = dbState.customLandings.find(l => l.slug === slug);
         if (landing) { setSelectedLanding(landing); setCurrentPage('custom-landing'); }
+      } else if (path.startsWith('track/')) {
+        const orderId = path.split('/')[1];
+        setTrackingOrderId(orderId);
+        setCurrentPage('track');
       } else if (path && path !== 'landing') {
         setCurrentPage(path);
       }
@@ -89,10 +95,22 @@ const App: React.FC = () => {
     initApp();
   }, []);
 
-  const handleNavigate = (page: string, slugOrId?: string) => {
+  const handleNavigate = (page: string, slugOrId?: string, bypassAuth: boolean = false) => {
+    // Reset internal states when switching major sections
+    if (page !== 'track') setTrackingOrderId(null);
+    
+    // Auth Guard for Dashboard
+    if (!bypassAuth && (page === 'dashboard' || page === 'admin') && !state.currentUser) {
+      setCurrentPage('login');
+      return;
+    }
+
     if (page === 'product' && slugOrId) {
       const product = state.products.find(p => p.slug === slugOrId || p.id === slugOrId);
       if (product) { setSelectedProductId(product.id); setCurrentPage('product'); }
+    } else if (page === 'track') {
+      if (slugOrId) setTrackingOrderId(slugOrId);
+      setCurrentPage('track');
     } else if (page.startsWith('landing/') || (page === 'landing' && slugOrId)) {
       const slug = slugOrId || page.split('/')[1];
       const landing = state.customLandings.find(l => l.slug === slug);
@@ -140,6 +158,7 @@ const App: React.FC = () => {
     
     const newOrder: Order = {
       id: orderId,
+      customerId: state.currentUser?.id,
       customerName: formData.name,
       customerPhone: formData.phone,
       items: [{ productId: checkoutProduct.id, quantity: checkoutQty, price: checkoutProduct.price }],
@@ -160,8 +179,10 @@ const App: React.FC = () => {
 
     tracker.trackPurchase(newOrder);
     setCheckoutProduct(null);
-    alert('✨ Order confirmed successfully!');
-    handleNavigate('dashboard');
+    alert(`✨ Order confirmed! Your Order ID is: ${orderId}`);
+    
+    // Automatically navigate to tracking page for immediate feedback
+    handleNavigate('track', orderId);
   };
 
   useEffect(() => {
@@ -180,7 +201,7 @@ const App: React.FC = () => {
           user={state.currentUser} 
           onNavigate={handleNavigate} 
           cartCount={0}
-          onLogout={() => setState(p => ({...p, currentUser: null}))}
+          onLogout={() => { setState(p => ({...p, currentUser: null})); setCurrentPage('landing'); }}
           logo={state.hero.logo}
           menus={state.navMenus}
           onSearch={(q) => setSearchQuery(q)}
@@ -216,20 +237,39 @@ const App: React.FC = () => {
             onNavigate={handleNavigate}
           />
         )}
+        {currentPage === 'track' && (
+          <OrderTrackingPage 
+            orders={state.orders}
+            products={state.products}
+            initialOrderId={trackingOrderId}
+          />
+        )}
         {currentPage === 'custom-landing' && selectedLanding && (
           <CustomLandingView page={selectedLanding} />
         )}
         {currentPage === 'admin' && (
           <AdminDashboard state={state} setState={setState} />
         )}
-        {currentPage === 'dashboard' && (
+        {currentPage === 'dashboard' && state.currentUser && (
           <CustomerDashboard 
-            user={state.currentUser || { id: 'guest', name: 'Guest', role: 'customer', email: '' }}
-            orders={state.orders}
+            user={state.currentUser}
+            orders={state.orders.filter(o => o.customerId === state.currentUser?.id || o.customerPhone === state.currentUser?.phone || o.customerEmail === state.currentUser?.email)}
             products={state.products}
+            onNavigate={handleNavigate}
           />
         )}
-        {currentPage === 'login' && <LoginPage onLogin={(u) => { setState(p => ({...p, currentUser: u})); setCurrentPage('landing'); }} />}
+        {currentPage === 'login' && (
+          <LoginPage 
+            onLogin={(u) => { 
+              setState(p => ({...p, currentUser: u})); 
+              handleNavigate(u.role === 'admin' ? 'admin' : 'dashboard', undefined, true); 
+            }} 
+            onRegister={(u) => { 
+              setState(p => ({...p, currentUser: u})); 
+              handleNavigate('dashboard', undefined, true); 
+            }}
+          />
+        )}
       </main>
 
       {currentPage !== 'admin' && currentPage !== 'custom-landing' && <Footer config={state.footer} onNavigate={handleNavigate} logo={state.hero.logo} />}
@@ -241,6 +281,7 @@ const App: React.FC = () => {
         quantity={checkoutQty}
         onOrder={handleConfirmOrder}
         onUpdateDraft={handleUpdateDraft}
+        user={state.currentUser}
       />
       {currentPage !== 'custom-landing' && <MobileBottomNav currentPage={currentPage} onNavigate={handleNavigate} userRole={state.currentUser?.role} />}
     </div>

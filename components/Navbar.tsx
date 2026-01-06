@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingCart, User, Search, Heart, Menu, LogOut } from 'lucide-react';
+import { ShoppingCart, User, Search, Heart, Menu, LogOut, Truck } from 'lucide-react';
 import { User as UserType, NavMenu, HeaderConfig } from '../types';
 
 interface NavbarProps {
@@ -71,6 +71,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, cartCount, onLogout, 
                     {item.label}
                   </button>
                 ))}
+                <button onClick={() => onNavigate('track')} className="text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-2">
+                   <Truck className="w-4 h-4" /> Track Order
+                </button>
               </div>
             </div>
 

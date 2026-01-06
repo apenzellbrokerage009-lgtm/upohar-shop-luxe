@@ -29,11 +29,13 @@ export type UserRole = 'admin' | 'customer' | 'call_center' | 'packaging';
 
 export interface User {
   id: string;
-  email: string;
+  email?: string;
+  phone?: string;
   name: string;
   role: UserRole;
   password?: string;
   avatar?: string;
+  createdAt?: string;
 }
 
 export interface OrderItem {
@@ -217,6 +219,7 @@ export interface AppState {
   expenses: Expense[];
   employees: Employee[];
   adminUsers: User[];
+  customers: User[];
   attendance: any[];
   payroll: any[];
   blogPosts: any[];
