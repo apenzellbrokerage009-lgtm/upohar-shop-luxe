@@ -1,5 +1,7 @@
 {
   "name": "Upohar Luxe - Premium Gift Shop",
   "description": "A high-end e-commerce platform for curated gifts with a full admin dashboard, product management, and seamless checkout experience.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }

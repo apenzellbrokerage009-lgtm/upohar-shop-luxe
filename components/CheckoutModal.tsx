@@ -8,7 +8,14 @@ interface CheckoutModalProps {
   onClose: () => void;
   product: Product | null;
   quantity: number;
-  onOrder: (data: { name: string; phone: string; address: string; deliveryCharge: number }) => void;
+  onOrder: (data: { 
+    name: string; 
+    phone: string; 
+    address: string; 
+    deliveryCharge: number;
+    ipAddress?: string;
+    location?: { lat: number, lng: number }
+  }) => void;
   onUpdateDraft: (data: { name: string; phone: string; address: string; draftId: string; deliveryCharge: number }) => void;
 }
 
@@ -22,6 +29,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
   const [formData, setFormData] = useState({ name: '', phone: '', address: '' });
   const [selectedZone, setSelectedZone] = useState(DELIVERY_ZONES[0]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [trackingData, setTrackingData] = useState<{ ip?: string; loc?: { lat: number; lng: number } }>({});
   const draftIdRef = useRef<string>('');
 
   useEffect(() => {
@@ -29,8 +37,36 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
       setFormData({ name: '', phone: '', address: '' });
       setSelectedZone(DELIVERY_ZONES[0]);
       draftIdRef.current = 'DRAFT-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+      
+      // Attempt to capture tracking data immediately
+      captureTrackingData();
     }
   }, [isOpen]);
+
+  const captureTrackingData = async () => {
+    try {
+      // 1. Capture IP
+      const ipRes = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipRes.json();
+      
+      // 2. Capture Geolocation
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setTrackingData({
+              ip: ipData.ip,
+              loc: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+            });
+          },
+          () => setTrackingData(prev => ({ ...prev, ip: ipData.ip }))
+        );
+      } else {
+        setTrackingData({ ip: ipData.ip });
+      }
+    } catch (e) {
+      console.warn("Tracking Capture Failed", e);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !product) return;
@@ -56,7 +92,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
       alert("Please fill in all fields.");
       return;
     }
-    onOrder({ ...formData, deliveryCharge: selectedZone.fee });
+    
+    onOrder({ 
+      ...formData, 
+      deliveryCharge: selectedZone.fee,
+      ipAddress: trackingData.ip,
+      location: trackingData.loc
+    });
   };
 
   return (
@@ -76,7 +118,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
               </div>
               <div>
                 <h2 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">Checkout</h2>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Direct Delivery Concierge</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Order Verification System Active</p>
               </div>
             </div>
             {isSyncing && (
@@ -97,7 +139,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-6">
-                {/* Contact & Address Information */}
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
@@ -113,7 +154,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
                   </div>
                 </div>
 
-                {/* Shipping Zone - Now below the address */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Select Delivery Location</label>
                   <div className="grid grid-cols-3 gap-2">
@@ -160,7 +200,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
 
           <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-widest">
             <div className="flex items-center gap-2"><Truck className="w-4 h-4" /> Cash on Delivery</div>
-            <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> Secure Handover</div>
+            <div className="flex items-center gap-2 tracking-tighter">Your IP: <span className="text-rose-600">{trackingData.ip || 'Detecting...'}</span></div>
           </div>
         </div>
       </div>

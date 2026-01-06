@@ -1,37 +1,36 @@
 
-export type Category = 'Floral' | 'Gourmet' | 'Jewelry' | 'Personalized' | 'Decor';
-
 export interface Product {
   id: string;
+  slug: string;
   name: string;
   price: number;
-  category: Category;
+  buyingPrice: number;
+  category: string;
   shortDescription: string;
   fullDescription: string;
   images: string[];
-  image: string; // Keep for backwards compatibility/thumbnail
+  image: string;
   stock: number;
   rating: number;
   reviews: number;
   isFeatured?: boolean;
+  createdAt?: string;
+  salesCount?: number;
 }
 
-export interface BlogPost {
+export interface Category {
   id: string;
-  title: string;
+  name: string;
   slug: string;
-  excerpt: string;
-  content: string;
-  image: string;
-  author: string;
-  createdAt: string;
+  image?: string;
 }
 
-export interface NavMenu {
+export interface User {
   id: string;
-  label: string;
-  href: string;
-  isExternal: boolean;
+  email: string;
+  name: string;
+  role: 'admin' | 'customer';
+  avatar?: string;
 }
 
 export interface OrderItem {
@@ -43,40 +42,65 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  customerId: string;
+  customerId?: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   items: OrderItem[];
-  subtotal: number;
+  subtotal?: number;
   deliveryCharge: number;
   total: number;
-  status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'call_not_received' | 'partial';
   createdAt: string;
   shippingAddress: string;
-  customerEmail?: string;
-  trackingCode?: string;
-  courierUsed?: string;
+  paymentMethod?: string;
+  ipAddress?: string;
+  location?: { lat: number; lng: number };
 }
 
 export interface IncompleteOrder {
   id: string;
-  name: string;
-  phone: string;
-  address: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  deliveryCharge?: number;
-  timestamp: string;
-  lastUpdated: string;
+  customerName: string;
+  customerPhone: string;
+  items: any[];
+  createdAt: string;
+  status: 'abandoned';
 }
 
-export interface User {
+export interface Expense {
   id: string;
-  email: string;
-  role: 'admin' | 'customer';
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+}
+
+export interface Employee {
+  id: string;
   name: string;
-  avatar?: string;
+  designation: string;
+  salary: number;
+  email: string;
+  phone: string;
+  joinedDate: string;
+  status: 'Active' | 'Inactive';
+}
+
+export interface ThemeConfig {
+  primaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  fontFamily: 'Inter' | 'Playfair Display' | 'Montserrat' | 'Poppins';
+  borderRadius: 'none' | 'small' | 'medium' | 'large' | 'full';
+}
+
+export interface HomeSection {
+  id: string;
+  type: 'new_arrivals' | 'best_sellers' | 'category_showcase';
+  title: string;
+  category?: string;
+  limit: number;
+  isActive: boolean;
 }
 
 export interface HeroSection {
@@ -87,14 +111,44 @@ export interface HeroSection {
   logo?: string;
 }
 
-export interface CustomPage {
+export interface HeaderConfig {
+  announcementText: string;
+  announcementBgColor: string;
+  announcementTextColor: string;
+  logoUrl: string;
+  isAnnouncementEnabled: boolean;
+}
+
+export interface NavMenu {
   id: string;
-  slug: string;
-  productId: string;
+  label: string;
+  href: string;
+  isExternal?: boolean;
+}
+
+export interface FooterLink {
+  label: string;
+  href: string;
+}
+
+export interface FooterColumn {
   title: string;
-  html: string;
-  css: string;
-  isActive: boolean;
+  links: FooterLink[];
+}
+
+export interface SocialLink {
+  platform: string;
+  url: string;
+}
+
+export interface FooterConfig {
+  aboutText: string;
+  address: string;
+  phone: string;
+  email: string;
+  copyright: string;
+  columns: FooterColumn[];
+  socials: SocialLink[];
 }
 
 export interface TrackingConfig {
@@ -107,15 +161,26 @@ export interface TrackingConfig {
   isEnabled: boolean;
 }
 
-export interface SteadfastConfig { apiKey: string; secretKey: string; isEnabled: boolean; }
-export interface PathaoConfig { clientId: string; clientSecret: string; username: string; password: string; storeId: string; isEnabled: boolean; }
+export interface SteadfastConfig {
+  apiKey: string;
+  secretKey: string;
+  isEnabled: boolean;
+}
 
-// Added CourierProfile and CourierStats to resolve missing exports used in courierService.ts
+export interface PathaoConfig {
+  clientId: string;
+  clientSecret: string;
+  username: string;
+  password: string;
+  storeId: string;
+  isEnabled: boolean;
+}
+
 export interface CourierProfile {
-  courier_name?: string;
+  courier?: string;
   total_orders?: number;
-  success_orders?: number;
-  cancelled_orders?: number;
+  total_success?: number;
+  total_cancel?: number;
 }
 
 export interface CourierStats {
@@ -132,14 +197,23 @@ export interface CourierStats {
 
 export interface AppState {
   products: Product[];
+  categories: Category[];
   orders: Order[];
   incompleteOrders: IncompleteOrder[];
-  blogPosts: BlogPost[];
+  expenses: Expense[];
+  employees: Employee[];
+  attendance: any[];
+  payroll: any[];
+  blogPosts: any[];
   currentUser: User | null;
   hero: HeroSection;
+  header: HeaderConfig;
+  footer: FooterConfig;
+  theme: ThemeConfig;
+  homeSections: HomeSection[];
   tracking: TrackingConfig;
   steadfast: SteadfastConfig;
   pathao: PathaoConfig;
-  customPages: CustomPage[];
+  customPages: any[];
   navMenus: NavMenu[];
 }

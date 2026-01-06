@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { AppState, Product, Order, IncompleteOrder } from './types';
 import { getDb, saveDb, getDefaultState } from './db';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import LandingPage from './pages/LandingPage';
 import ShopPage from './pages/ShopPage';
 import AdminDashboard from './pages/AdminDashboard';
@@ -21,62 +22,63 @@ const App: React.FC = () => {
   const [selectedCustomPageId, setSelectedCustomPageId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Checkout Modal State
   const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
   const [checkoutQty, setCheckoutQty] = useState(1);
 
-  // Initial Data Fetch
+  // Dynamic Theme Injector
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--var-primary', state.theme.primaryColor);
+    root.style.setProperty('--var-accent', state.theme.accentColor);
+    root.style.setProperty('--var-bg', state.theme.backgroundColor);
+    
+    document.body.className = `font-${state.theme.fontFamily.toLowerCase().replace(' ', '-')} rounded-mode-${state.theme.borderRadius}`;
+    
+    const styleId = 'dynamic-theme-style';
+    let styleEl = document.getElementById(styleId);
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    styleEl.innerHTML = `
+      .bg-var-primary { background-color: var(--var-primary); }
+      .bg-var-accent { background-color: var(--var-accent); }
+      .bg-var-bg { background-color: var(--var-bg); }
+      .text-var-primary { color: var(--var-primary); }
+      .text-var-accent { color: var(--var-accent); }
+      .border-var-primary { border-color: var(--var-primary); }
+      .border-var-accent { border-color: var(--var-accent); }
+      body { font-family: '${state.theme.fontFamily}', sans-serif; }
+    `;
+  }, [state.theme]);
+
   useEffect(() => {
     const initApp = async () => {
       const dbState = await getDb();
       setState(dbState);
       setIsLoading(false);
-      // Initialize tracking
-      if (dbState.tracking) {
-        tracker.init(dbState.tracking);
-        tracker.trackPageView('Home');
+      
+      const path = window.location.hash.replace('#', '');
+      if (path.startsWith('products/')) {
+        const slug = path.split('/')[1];
+        const p = dbState.products.find(prod => prod.slug === slug);
+        if (p) { setSelectedProductId(p.id); setCurrentPage('product'); }
+      } else if (path && path !== 'landing') {
+        setCurrentPage(path);
       }
     };
     initApp();
   }, []);
 
-  // Sync with tracker when tracking settings change in Admin
-  useEffect(() => {
-    if (!isLoading && state.tracking.isEnabled) {
-      tracker.init(state.tracking);
+  const handleNavigate = (page: string, slugOrId?: string) => {
+    if (page === 'product' && slugOrId) {
+      const product = state.products.find(p => p.slug === slugOrId || p.id === slugOrId);
+      if (product) { setSelectedProductId(product.id); setCurrentPage('product'); }
+    } else {
+      setCurrentPage(page);
     }
-  }, [state.tracking, isLoading]);
-
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery) return state.products;
-    return state.products.filter(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      p.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [state.products, searchQuery]);
-
-  const handleNavigate = (page: string, id?: string) => {
-    const customPage = state.customPages.find(p => p.slug === page);
-    if (customPage) {
-       setSelectedCustomPageId(customPage.id);
-       setCurrentPage('custom');
-       tracker.trackPageView(page);
-       window.scrollTo({ top: 0, behavior: 'smooth' });
-       return;
-    }
-    setCurrentPage(page);
-    if (page === 'product' && id) {
-      setSelectedProductId(id);
-      const product = state.products.find(p => p.id === id);
-      if (product) tracker.trackViewContent(product);
-    }
-    tracker.trackPageView(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleLogout = () => {
-    setState(prev => ({ ...prev, currentUser: null }));
-    setCurrentPage('landing');
   };
 
   const triggerCheckout = (product: Product, quantity: number = 1) => {
@@ -85,69 +87,61 @@ const App: React.FC = () => {
     tracker.trackInitiateCheckout(product, quantity);
   };
 
-  const handleUpdateDraft = (data: { name: string; phone: string; address: string; draftId: string; deliveryCharge: number }) => {
+  const handleUpdateDraft = (data: any) => {
     if (!checkoutProduct) return;
     
     setState(prev => {
-      const existingIdx = prev.incompleteOrders.findIndex(o => o.id === data.draftId);
-      const newLead: IncompleteOrder = {
+      const others = prev.incompleteOrders.filter(o => o.id !== data.draftId);
+      
+      const draft: IncompleteOrder = {
         id: data.draftId,
-        name: data.name,
-        phone: data.phone,
-        address: data.address,
-        productId: checkoutProduct.id,
-        productName: checkoutProduct.name,
-        quantity: checkoutQty,
-        deliveryCharge: data.deliveryCharge,
-        timestamp: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
+        customerName: data.name || 'Prospect',
+        customerPhone: data.phone || 'N/A',
+        items: [{ productId: checkoutProduct.id, quantity: checkoutQty, price: checkoutProduct.price }],
+        createdAt: new Date().toISOString(),
+        status: 'abandoned'
       };
 
-      if (existingIdx > -1) {
-        const updatedLeads = [...prev.incompleteOrders];
-        updatedLeads[existingIdx] = newLead;
-        return { ...prev, incompleteOrders: updatedLeads };
-      } else {
-        return { ...prev, incompleteOrders: [newLead, ...prev.incompleteOrders] };
-      }
+      if (!data.name && !data.phone) return prev;
+
+      return {
+        ...prev,
+        incompleteOrders: [draft, ...others]
+      };
     });
   };
 
-  const handleConfirmOrder = (formData: { name: string; phone: string; address: string; deliveryCharge: number }) => {
+  const handleConfirmOrder = (formData: any) => {
     if (!checkoutProduct) return;
     const subtotal = checkoutProduct.price * checkoutQty;
+    const orderId = Math.random().toString(36).substr(2, 6).toUpperCase();
+    
     const newOrder: Order = {
-      id: Math.random().toString(36).substr(2, 6).toUpperCase(),
-      customerId: state.currentUser?.id || 'guest',
+      id: orderId,
       customerName: formData.name,
       customerPhone: formData.phone,
-      items: [{ productId: checkoutProduct.id, productName: checkoutProduct.name, quantity: checkoutQty, price: checkoutProduct.price }],
-      subtotal,
-      deliveryCharge: formData.deliveryCharge,
+      items: [{ productId: checkoutProduct.id, quantity: checkoutQty, price: checkoutProduct.price }],
       total: subtotal + formData.deliveryCharge,
+      deliveryCharge: formData.deliveryCharge,
       status: 'pending',
       createdAt: new Date().toISOString(),
-      shippingAddress: formData.address
+      shippingAddress: formData.address,
+      ipAddress: formData.ipAddress,
+      location: formData.location
     };
-    
-    setState(prev => {
-      const saveTimeout = setTimeout(() => saveDb(state), 100);
-      return { 
-        ...prev, 
-        orders: [newOrder, ...prev.orders],
-        incompleteOrders: prev.incompleteOrders.filter(l => l.phone !== formData.phone)
-      }
-    });
 
-    // Fire live purchase tracking
+    setState(prev => ({ 
+      ...prev, 
+      orders: [newOrder, ...prev.orders],
+      incompleteOrders: prev.incompleteOrders.filter(o => o.customerPhone !== formData.phone)
+    }));
+
     tracker.trackPurchase(newOrder);
-
     setCheckoutProduct(null);
     alert('✨ Order confirmed successfully!');
     handleNavigate('dashboard');
   };
 
-  // Save to Database on State Update (Debounced)
   useEffect(() => {
     if (!isLoading) {
       const saveTimeout = setTimeout(() => saveDb(state), 1500);
@@ -155,71 +149,63 @@ const App: React.FC = () => {
     }
   }, [state, isLoading]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
-        <div className="w-16 h-16 border-4 border-rose-100 border-t-rose-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Syncing with server...</p>
-      </div>
-    );
-  }
-
-  const selectedProduct = state.products.find(p => p.id === selectedProductId);
+  if (isLoading) return null;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Navbar 
         user={state.currentUser} 
         onNavigate={handleNavigate} 
         cartCount={0}
-        onLogout={handleLogout}
+        onLogout={() => setState(p => ({...p, currentUser: null}))}
         logo={state.hero.logo}
         menus={state.navMenus}
-        onSearch={setSearchQuery}
+        onSearch={(q) => setSearchQuery(q)}
+        config={state.header}
       />
       
       <main className="pb-32 lg:pb-0">
         {currentPage === 'landing' && (
           <LandingPage 
             hero={state.hero} 
-            featuredProducts={filteredProducts.filter(p => p.isFeatured)}
-            onProductClick={(id) => handleNavigate('product', id)}
+            products={state.products}
+            sections={state.homeSections}
+            onProductClick={(slug) => handleNavigate('product', slug)}
             onNavigate={handleNavigate}
             onOrderNow={triggerCheckout}
           />
         )}
         {currentPage === 'shop' && (
           <ShopPage 
-            products={filteredProducts}
-            onProductClick={(id) => handleNavigate('product', id)}
+            products={state.products}
+            categories={state.categories}
+            searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery('')}
+            onProductClick={(slug) => handleNavigate('product', slug)}
             onOrderNow={triggerCheckout}
           />
         )}
-        {currentPage === 'product' && selectedProduct && (
+        {currentPage === 'product' && (
           <ProductPage 
-            product={selectedProduct}
+            product={state.products.find(p => p.id === selectedProductId)!}
             onOrderNow={triggerCheckout}
             onNavigate={handleNavigate}
           />
         )}
-        {currentPage === 'admin' && state.currentUser?.role === 'admin' && (
+        {currentPage === 'admin' && (
           <AdminDashboard state={state} setState={setState} />
         )}
         {currentPage === 'dashboard' && (
           <CustomerDashboard 
             user={state.currentUser || { id: 'guest', name: 'Guest', role: 'customer', email: '' }}
-            orders={state.orders.filter(o => o.customerId === (state.currentUser?.id || 'guest'))}
+            orders={state.orders}
             products={state.products}
           />
         )}
-        {currentPage === 'login' && <LoginPage onLogin={(u) => { setState(p => ({...p, currentUser: u})); setCurrentPage(u.role === 'admin' ? 'admin' : 'landing'); }} />}
-        {currentPage === 'custom' && (
-          <div>
-            <style dangerouslySetInnerHTML={{ __html: state.customPages.find(p => p.id === selectedCustomPageId)?.css || '' }} />
-            <div dangerouslySetInnerHTML={{ __html: state.customPages.find(p => p.id === selectedCustomPageId)?.html || '' }} />
-          </div>
-        )}
+        {currentPage === 'login' && <LoginPage onLogin={(u) => { setState(p => ({...p, currentUser: u})); setCurrentPage('landing'); }} />}
       </main>
+
+      {currentPage !== 'admin' && <Footer config={state.footer} onNavigate={handleNavigate} logo={state.hero.logo} />}
 
       <CheckoutModal 
         isOpen={!!checkoutProduct}
@@ -229,7 +215,6 @@ const App: React.FC = () => {
         onOrder={handleConfirmOrder}
         onUpdateDraft={handleUpdateDraft}
       />
-
       <MobileBottomNav currentPage={currentPage} onNavigate={handleNavigate} userRole={state.currentUser?.role} />
     </div>
   );
