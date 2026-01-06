@@ -67,6 +67,7 @@ export interface IncompleteOrder {
   id: string;
   customerName: string;
   customerPhone: string;
+  shippingAddress?: string;
   items: any[];
   createdAt: string;
   status: 'abandoned';

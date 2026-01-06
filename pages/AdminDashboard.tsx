@@ -5,7 +5,7 @@ import {
   Calculator, ShoppingBag, UserCheck, Package, FolderTree, 
   Wallet, Users, Palette, PanelTop, Layout, Settings, 
   Clock, Receipt, AlertCircle, TrendingUp, Printer, ShieldAlert, Cpu, CheckCircle2, XCircle, Edit, FileText, Download, Save, PhoneCall, CheckCircle, Ban, Truck, Search, Filter, Eye, Globe, Trash2, Send, ExternalLink,
-  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks, Heart, Contact, UserCog, Mail
+  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks, Heart, Contact, UserCog, Mail, Navigation, Star
 } from 'lucide-react';
 import { checkCustomerReliability } from '../courierService';
 import { dispatchToSteadfast, dispatchToPathao } from '../courierIntegrationService';
@@ -58,6 +58,10 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
 
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+  // States for Leads Courier Scores
+  const [leadScores, setLeadScores] = useState<Record<string, CourierStats>>({});
+  const [loadingScores, setLoadingScores] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setCourierResult(null);
@@ -158,7 +162,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
         
         if (result.success) {
           successCount++;
-          // Update order locally to shipped
           setState(prev => ({
             ...prev,
             orders: prev.orders.map(o => o.id === order.id ? { ...o, status: 'shipped' as const } : o)
@@ -184,6 +187,48 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
     } finally {
       setIsCheckingCourier(false);
     }
+  };
+
+  const checkLeadScore = async (leadId: string, phone: string) => {
+    setLoadingScores(prev => ({ ...prev, [leadId]: true }));
+    try {
+      const data = await checkCustomerReliability(phone);
+      if (data) {
+        setLeadScores(prev => ({ ...prev, [leadId]: data }));
+      }
+    } catch (err) {
+    } finally {
+      setLoadingScores(prev => ({ ...prev, [leadId]: false }));
+    }
+  };
+
+  const handleConfirmLead = (lead: IncompleteOrder) => {
+    const address = lead.shippingAddress || prompt("Enter shipping address for this order:");
+    if (address === null) return; // Cancelled prompt
+    
+    const deliveryCharge = 60; // Default or calculate based on address
+    const subtotal = lead.items.reduce((acc, it) => acc + (it.price * it.quantity), 0);
+    
+    const newOrder: Order = {
+      id: lead.id.replace('DRAFT-', '') || Math.random().toString(36).substr(2, 6).toUpperCase(),
+      customerName: lead.customerName,
+      customerPhone: lead.customerPhone,
+      items: lead.items,
+      subtotal: subtotal,
+      deliveryCharge: deliveryCharge,
+      total: subtotal + deliveryCharge,
+      status: 'processing',
+      createdAt: new Date().toISOString(),
+      shippingAddress: address || 'No Address Provided'
+    };
+
+    setState(prev => ({
+      ...prev,
+      orders: [newOrder, ...prev.orders],
+      incompleteOrders: prev.incompleteOrders.filter(l => l.id !== lead.id)
+    }));
+    
+    alert("Lead confirmed and converted to Order!");
   };
 
   const handlePrint = (mode: 'invoice' | 'slip') => {
@@ -361,6 +406,108 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                   ))}
                </div>
             </div>
+          )}
+
+          {activeTab === 'leads' && (
+             <div className="space-y-10 animate-in fade-in duration-500">
+                <div className="flex justify-between items-center">
+                   <div>
+                      <h3 className="text-xl font-black uppercase tracking-widest text-slate-900">Abandoned Intelligence</h3>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">High-intent prospects who exited the checkout flow</p>
+                   </div>
+                   <div className="bg-rose-50 px-6 py-3 rounded-2xl border border-rose-100 flex items-center gap-3">
+                      <AlertCircle className="w-4 h-4 text-rose-600" />
+                      <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">{state.incompleteOrders.length} Potential Recoveries</span>
+                   </div>
+                </div>
+
+                <div className="bg-white rounded-[4rem] border border-slate-100 overflow-hidden shadow-sm">
+                   <table className="w-full text-left">
+                      <thead>
+                         <tr className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                            <th className="px-10 py-8">Prospect Identity</th>
+                            <th className="px-10 py-8">Courier Score</th>
+                            <th className="px-10 py-8">Abandoned Assets</th>
+                            <th className="px-10 py-8">Last Seen</th>
+                            <th className="px-10 py-8 text-right">Recovery Actions</th>
+                         </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                         {state.incompleteOrders.map(lead => (
+                           <tr key={lead.id} className="hover:bg-slate-50/50 transition-all group">
+                              <td className="px-10 py-8">
+                                 <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black">?</div>
+                                    <div>
+                                       <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{lead.customerName}</p>
+                                       <div className="flex items-center gap-2 mt-1">
+                                          <p className="text-[11px] font-black text-rose-600 flex items-center gap-2">
+                                             <PhoneCall className="w-3 h-3" /> {lead.customerPhone}
+                                          </p>
+                                          <button onClick={() => checkLeadScore(lead.id, lead.customerPhone)} className="p-1 hover:bg-slate-100 rounded transition-all">
+                                             {loadingScores[lead.id] ? <RefreshCw className="w-3 h-3 animate-spin text-slate-400" /> : <SearchCode className="w-3 h-3 text-slate-300" />}
+                                          </button>
+                                       </div>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="px-10 py-8">
+                                 {leadScores[lead.id] ? (
+                                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full border w-fit ${leadScores[lead.id].isRisk ? 'bg-rose-50 border-rose-100 text-rose-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                       {leadScores[lead.id].isRisk ? <Ban className="w-3 h-3"/> : <CheckCircle className="w-3 h-3"/>}
+                                       <span className="text-[10px] font-black uppercase">{Math.round(leadScores[lead.id].successRate)}% Rate</span>
+                                    </div>
+                                 ) : (
+                                    <span className="text-[10px] font-bold text-slate-300 uppercase italic">Not Scanned</span>
+                                 )}
+                              </td>
+                              <td className="px-10 py-8">
+                                 <div className="flex flex-wrap gap-2">
+                                    {lead.items.map((it, i) => (
+                                       <span key={i} className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg border border-slate-200">
+                                          {state.products.find(p => p.id === it.productId)?.name || 'Asset'} (x{it.quantity})
+                                       </span>
+                                    ))}
+                                 </div>
+                              </td>
+                              <td className="px-10 py-8">
+                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(lead.createdAt).toLocaleString()}</p>
+                              </td>
+                              <td className="px-10 py-8 text-right">
+                                 <div className="flex justify-end gap-3">
+                                    <button 
+                                      onClick={() => handleConfirmLead(lead)}
+                                      title="Confirm Order"
+                                      className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center hover:bg-emerald-700 transition-all shadow-lg"
+                                    >
+                                       <CheckCircle className="w-4 h-4"/>
+                                    </button>
+                                    <a 
+                                      href={`tel:${lead.customerPhone}`}
+                                      className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-rose-600 transition-all shadow-lg"
+                                    >
+                                       <PhoneCall className="w-4 h-4"/>
+                                    </a>
+                                    <button 
+                                      onClick={() => setState(prev => ({ ...prev, incompleteOrders: prev.incompleteOrders.filter(l => l.id !== lead.id) }))}
+                                      className="w-10 h-10 bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
+                                    >
+                                       <Trash2 className="w-4 h-4"/>
+                                    </button>
+                                 </div>
+                              </td>
+                           </tr>
+                         ))}
+                      </tbody>
+                   </table>
+                   {state.incompleteOrders.length === 0 && (
+                      <div className="py-32 text-center">
+                         <UserCheck className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">No abandoned sessions detected</p>
+                      </div>
+                   )}
+                </div>
+             </div>
           )}
 
           {activeTab === 'customers' && (
@@ -610,6 +757,37 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                            <div className="group space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Recipient Identity</label><input disabled={userRole === 'packaging'} className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none" value={selectedOrder.customerName} onChange={e => handleUpdateOrder({ customerName: e.target.value })} /></div>
                            <div className="group space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Digital Comms (Phone)</label><div className="flex gap-3"><input disabled={userRole === 'packaging'} className="flex-grow px-8 py-5 bg-slate-50 border border-slate-100 rounded-[1.8rem] font-black text-sm outline-none" value={selectedOrder.customerPhone} onChange={e => handleUpdateOrder({ customerPhone: e.target.value })} /><button onClick={() => handleCourierCheck(selectedOrder.customerPhone)} className="w-16 bg-slate-950 text-white rounded-[1.5rem] flex items-center justify-center transition-all hover:bg-rose-600">{isCheckingCourier ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Search className="w-4 h-4"/>}</button></div></div>
                            <div className="group space-y-2"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Shipping Destination</label><textarea disabled={userRole === 'packaging'} className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none h-40 resize-none" value={selectedOrder.shippingAddress} onChange={e => handleUpdateOrder({ shippingAddress: e.target.value })} /></div>
+                           
+                           {/* CUSTOMER TECH METADATA BLOCK */}
+                           <div className="pt-6 border-t border-slate-50 space-y-4">
+                              <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Customer Technical Metadata</p>
+                              <div className="grid grid-cols-1 gap-3">
+                                 <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <Globe className="w-4 h-4 text-blue-500" />
+                                    <div>
+                                       <p className="text-[8px] font-black text-slate-400 uppercase">IP Address Trace</p>
+                                       <p className="text-xs font-mono font-bold text-slate-600">{selectedOrder.ipAddress || 'Not Collected'}</p>
+                                    </div>
+                                 </div>
+                                 {selectedOrder.location && (
+                                    <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                       <Navigation className="w-4 h-4 text-emerald-500" />
+                                       <div>
+                                          <p className="text-[8px] font-black text-slate-400 uppercase">Geolocation Node</p>
+                                          <p className="text-xs font-mono font-bold text-slate-600">{selectedOrder.location.lat.toFixed(4)}, {selectedOrder.location.lng.toFixed(4)}</p>
+                                       </div>
+                                       <a 
+                                          href={`https://www.google.com/maps?q=${selectedOrder.location.lat},${selectedOrder.location.lng}`} 
+                                          target="_blank" 
+                                          rel="noreferrer"
+                                          className="ml-auto p-2 bg-white rounded-lg text-slate-400 hover:text-rose-600 shadow-sm transition-all"
+                                       >
+                                          <ExternalLink className="w-3 h-3" />
+                                       </a>
+                                    </div>
+                                 )}
+                              </div>
+                           </div>
                         </div>
                      </div>
                   </div>

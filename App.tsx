@@ -96,10 +96,8 @@ const App: React.FC = () => {
   }, []);
 
   const handleNavigate = (page: string, slugOrId?: string, bypassAuth: boolean = false) => {
-    // Reset internal states when switching major sections
     if (page !== 'track') setTrackingOrderId(null);
     
-    // Auth Guard for Dashboard
     if (!bypassAuth && (page === 'dashboard' || page === 'admin') && !state.currentUser) {
       setCurrentPage('login');
       return;
@@ -137,6 +135,7 @@ const App: React.FC = () => {
         id: data.draftId,
         customerName: data.name || 'Prospect',
         customerPhone: data.phone || 'N/A',
+        shippingAddress: data.address || '',
         items: [{ productId: checkoutProduct.id, quantity: checkoutQty, price: checkoutProduct.price }],
         createdAt: new Date().toISOString(),
         status: 'abandoned'
@@ -162,8 +161,8 @@ const App: React.FC = () => {
       customerName: formData.name,
       customerPhone: formData.phone,
       items: [{ productId: checkoutProduct.id, quantity: checkoutQty, price: checkoutProduct.price }],
-      total: subtotal + formData.deliveryCharge,
-      deliveryCharge: formData.deliveryCharge,
+      total: subtotal + (formData.deliveryCharge || 0),
+      deliveryCharge: formData.deliveryCharge || 0,
       status: 'pending',
       createdAt: new Date().toISOString(),
       shippingAddress: formData.address,
@@ -181,7 +180,6 @@ const App: React.FC = () => {
     setCheckoutProduct(null);
     alert(`✨ Order confirmed! Your Order ID is: ${orderId}`);
     
-    // Automatically navigate to tracking page for immediate feedback
     handleNavigate('track', orderId);
   };
 
