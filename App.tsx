@@ -296,7 +296,14 @@ const App: React.FC = () => {
         user={state.currentUser}
         discountConfig={state.discount}
       />
-      {currentPage !== 'custom-landing' && <MobileBottomNav currentPage={currentPage} onNavigate={handleNavigate} userRole={state.currentUser?.role} />}
+      {/* Updated condition to hide bottom nav on product page */}
+      {currentPage !== 'custom-landing' && currentPage !== 'product' && (
+        <MobileBottomNav 
+          currentPage={currentPage} 
+          onNavigate={handleNavigate} 
+          userRole={state.currentUser?.role} 
+        />
+      )}
       {currentPage !== 'admin' && <ChatWidget state={state} setState={setState} />}
     </div>
   );

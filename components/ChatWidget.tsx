@@ -90,19 +90,19 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ state, setState }) => {
   const unreadCount = session?.messages.filter(m => m.senderRole === 'staff' && !m.isRead).length || 0;
 
   return (
-    <div className="fixed bottom-6 right-6 z-[300] flex flex-col items-end gap-4 no-print">
+    <div className="fixed right-4 md:right-8 bottom-24 md:bottom-10 z-[300] flex flex-col items-end gap-4 no-print">
       {isOpen && (
-        <div className="w-[380px] h-[550px] bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] border border-slate-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
+        <div className="absolute right-0 bottom-full mb-4 w-[320px] sm:w-[380px] h-[500px] sm:h-[550px] bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] border border-slate-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
           {/* Header */}
           <div className="bg-slate-900 p-6 flex justify-between items-center text-white shrink-0">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center text-white font-black italic shadow-lg">U</div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-slate-900 rounded-full"></div>
+                <div className="w-10 h-10 bg-rose-600 rounded-2xl flex items-center justify-center text-white font-black italic shadow-lg text-sm">U</div>
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full"></div>
               </div>
               <div>
-                <h4 className="font-black uppercase text-[10px] tracking-widest text-slate-400">Live Concierge</h4>
-                <p className="text-sm font-bold tracking-tight">Upohar Luxe Assistant</p>
+                <h4 className="font-black uppercase text-[8px] tracking-widest text-slate-400">Live Concierge</h4>
+                <p className="text-xs font-bold tracking-tight">Upohar Luxe Assistant</p>
               </div>
             </div>
             <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
@@ -114,12 +114,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ state, setState }) => {
           <div ref={scrollRef} className="flex-grow overflow-y-auto p-6 space-y-4 scrollbar-hide bg-slate-50/50">
             {session?.messages.map((m, i) => (
               <div key={m.id} className={`flex ${m.senderRole === 'customer' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-4 rounded-3xl text-sm leading-relaxed shadow-sm ${
+                <div className={`max-w-[85%] p-4 rounded-3xl text-sm leading-relaxed shadow-sm ${
                   m.senderRole === 'customer' 
                     ? 'bg-rose-600 text-white rounded-tr-none' 
                     : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
-                  <p className="font-medium">{m.text}</p>
+                  <p className="font-medium text-[13px]">{m.text}</p>
                   <p className={`text-[8px] mt-2 font-bold uppercase tracking-widest opacity-40 ${m.senderRole === 'customer' ? 'text-right' : 'text-left'}`}>
                     {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -129,12 +129,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ state, setState }) => {
           </div>
 
           {/* Input */}
-          <div className="p-5 bg-white border-t border-slate-100 shrink-0">
-            <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-[1.8rem] border border-slate-100 focus-within:border-rose-300 focus-within:ring-4 focus-within:ring-rose-500/5 transition-all">
-              <button className="p-2 text-slate-400 hover:text-rose-600"><Smile className="w-5 h-5" /></button>
+          <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-100 focus-within:border-rose-300 focus-within:ring-4 focus-within:ring-rose-500/5 transition-all">
               <input 
                 placeholder="Compose message..." 
-                className="flex-grow bg-transparent outline-none text-sm font-bold py-2"
+                className="flex-grow bg-transparent outline-none text-sm font-bold py-2 px-2"
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend()}
@@ -153,11 +152,11 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ state, setState }) => {
 
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-16 h-16 bg-slate-950 text-white rounded-[1.8rem] shadow-[0_10px_30px_rgba(0,0,0,0.2)] flex items-center justify-center transition-all hover:scale-110 active:scale-95 group relative border border-white/5"
+        className="w-14 h-14 md:w-16 md:h-16 bg-slate-950 text-white rounded-[1.5rem] md:rounded-[1.8rem] shadow-[0_10px_30px_rgba(0,0,0,0.2)] flex items-center justify-center transition-all hover:scale-110 active:scale-95 group relative border border-white/5"
       >
-        {isOpen ? <X className="w-7 h-7" /> : <MessageCircle className="w-7 h-7 group-hover:rotate-12 transition-transform" />}
+        {isOpen ? <X className="w-6 h-6 md:w-7 md:h-7" /> : <MessageCircle className="w-6 h-6 md:w-7 md:h-7 group-hover:rotate-12 transition-transform" />}
         {!isOpen && unreadCount > 0 && (
-          <span className="absolute -top-2 -right-2 w-7 h-7 bg-rose-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-4 border-slate-50 shadow-lg">
+          <span className="absolute -top-2 -right-2 w-6 h-6 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-4 border-slate-50 shadow-lg">
             {unreadCount}
           </span>
         )}
