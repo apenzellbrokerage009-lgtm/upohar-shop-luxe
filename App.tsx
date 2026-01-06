@@ -29,7 +29,6 @@ const App: React.FC = () => {
   const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
   const [checkoutQty, setCheckoutQty] = useState(1);
 
-  // Favicon Injector
   useEffect(() => {
     if (state.header.faviconUrl) {
       let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
@@ -42,7 +41,6 @@ const App: React.FC = () => {
     }
   }, [state.header.faviconUrl]);
 
-  // Dynamic Theme Injector
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('--var-primary', state.theme.primaryColor);
@@ -162,13 +160,18 @@ const App: React.FC = () => {
       customerName: formData.name,
       customerPhone: formData.phone,
       items: [{ productId: checkoutProduct.id, quantity: checkoutQty, price: checkoutProduct.price }],
-      total: subtotal + (formData.deliveryCharge || 0),
+      subtotal: subtotal,
+      total: formData.isDiscountApplied 
+        ? (subtotal - (formData.discountAmount || 0)) + (formData.deliveryCharge || 0) 
+        : subtotal + (formData.deliveryCharge || 0),
       deliveryCharge: formData.deliveryCharge || 0,
       status: 'pending',
       createdAt: new Date().toISOString(),
       shippingAddress: formData.address,
       ipAddress: formData.ipAddress,
-      location: formData.location
+      location: formData.location,
+      isDiscountApplied: formData.isDiscountApplied,
+      discountAmount: formData.discountAmount
     };
 
     setState(prev => ({ 
@@ -281,6 +284,7 @@ const App: React.FC = () => {
         onOrder={handleConfirmOrder}
         onUpdateDraft={handleUpdateDraft}
         user={state.currentUser}
+        discountConfig={state.discount}
       />
       {currentPage !== 'custom-landing' && <MobileBottomNav currentPage={currentPage} onNavigate={handleNavigate} userRole={state.currentUser?.role} />}
       {currentPage !== 'admin' && <ChatWidget state={state} setState={setState} />}

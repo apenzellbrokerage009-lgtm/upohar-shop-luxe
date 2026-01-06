@@ -1,7 +1,8 @@
 
 import express from 'express';
 import { AppState, Order, Product, Expense } from './types';
-import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES } from './constants';
+// Added INITIAL_DISCOUNT to imports
+import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES, INITIAL_DISCOUNT } from './constants';
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
@@ -34,6 +35,8 @@ let dbState: AppState = {
   tracking: { fbPixelId: '', fbAccessToken: '', fbTestCode: '', gtmId: '', gtmServerUrl: '', tiktokId: '', isEnabled: false },
   steadfast: { apiKey: '', secretKey: '', isEnabled: false },
   pathao: { clientId: '', clientSecret: '', username: '', password: '', storeId: '', isEnabled: false },
+  // Added missing discount property
+  discount: INITIAL_DISCOUNT,
   customPages: [],
   navMenus: [],
   customLandings: []

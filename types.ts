@@ -61,6 +61,8 @@ export interface Order {
   paymentMethod?: string;
   ipAddress?: string;
   location?: { lat: number; lng: number };
+  isDiscountApplied?: boolean;
+  discountAmount?: number;
 }
 
 export interface IncompleteOrder {
@@ -114,6 +116,13 @@ export interface ChatSession {
   messages: ChatMessage[];
 }
 
+export interface DiscountConfig {
+  isEnabled: boolean;
+  percentage: number;
+  title: string;
+  subtitle: string;
+}
+
 export interface AppState {
   products: Product[];
   categories: Category[];
@@ -136,6 +145,7 @@ export interface AppState {
   tracking: TrackingConfig;
   steadfast: SteadfastConfig;
   pathao: PathaoConfig;
+  discount: DiscountConfig;
   customPages: any[];
   navMenus: NavMenu[];
   customLandings: CustomLandingPage[];

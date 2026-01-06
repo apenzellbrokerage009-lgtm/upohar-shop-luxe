@@ -1,7 +1,7 @@
 
 import { AppState, User } from './types';
 import { api } from './api';
-import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES, INITIAL_NAV_MENUS, INITIAL_CUSTOM_PAGES } from './constants';
+import { INITIAL_PRODUCTS, INITIAL_HERO, INITIAL_FOOTER, INITIAL_HEADER, INITIAL_THEME, INITIAL_HOME_SECTIONS, INITIAL_CATEGORIES, INITIAL_NAV_MENUS, INITIAL_CUSTOM_PAGES, INITIAL_DISCOUNT } from './constants';
 
 export const MASTER_ADMIN: User = {
   id: 'master-1',
@@ -20,7 +20,6 @@ export const getDefaultState = (): AppState => ({
   employees: [],
   adminUsers: [MASTER_ADMIN],
   customers: [],
-  // Fix: Added missing chatSessions property to match AppState interface
   chatSessions: [],
   attendance: [],
   payroll: [],
@@ -34,6 +33,7 @@ export const getDefaultState = (): AppState => ({
   tracking: { fbPixelId: '', fbAccessToken: '', fbTestCode: '', gtmId: '', gtmServerUrl: '', tiktokId: '', isEnabled: false },
   steadfast: { apiKey: '', secretKey: '', isEnabled: false },
   pathao: { clientId: '', clientSecret: '', username: '', password: '', storeId: '', isEnabled: false },
+  discount: INITIAL_DISCOUNT,
   customPages: INITIAL_CUSTOM_PAGES,
   navMenus: INITIAL_NAV_MENUS,
   customLandings: []
@@ -46,7 +46,6 @@ export const getDb = async (): Promise<AppState> => {
     
     if (!remote) return base;
 
-    // Robust merge: ensure arrays are initialized even if remote data is partial
     const merged: AppState = {
       ...base,
       ...remote,
@@ -58,12 +57,11 @@ export const getDb = async (): Promise<AppState> => {
       incompleteOrders: Array.isArray(remote.incompleteOrders) ? remote.incompleteOrders : [],
       expenses: Array.isArray(remote.expenses) ? remote.expenses : [],
       employees: Array.isArray(remote.employees) ? remote.employees : [],
-      // Fix: Ensure chatSessions is initialized correctly during merge
       chatSessions: Array.isArray(remote.chatSessions) ? remote.chatSessions : [],
-      customLandings: Array.isArray(remote.customLandings) ? remote.customLandings : []
+      customLandings: Array.isArray(remote.customLandings) ? remote.customLandings : [],
+      discount: remote.discount || base.discount
     };
 
-    // Force Master Admin if missing for security and access recovery
     if (!merged.adminUsers.some(u => u.email === MASTER_ADMIN.email)) {
       merged.adminUsers = [MASTER_ADMIN, ...merged.adminUsers];
     }

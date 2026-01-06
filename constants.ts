@@ -1,5 +1,5 @@
 
-import { ThemeConfig, HomeSection, Category, NavMenu } from './types';
+import { ThemeConfig, HomeSection, Category, NavMenu, DiscountConfig } from './types';
 
 export const INITIAL_THEME: ThemeConfig = {
   primaryColor: '#0f172a', 
@@ -7,6 +7,13 @@ export const INITIAL_THEME: ThemeConfig = {
   backgroundColor: '#f8fafc', 
   fontFamily: 'Inter',
   borderRadius: 'large'
+};
+
+export const INITIAL_DISCOUNT: DiscountConfig = {
+  isEnabled: true,
+  percentage: 10,
+  title: 'Wait! A Special Gift for You',
+  subtitle: 'Complete your purchase now and get an extra 10% discount on this item.'
 };
 
 export const INITIAL_CATEGORIES: Category[] = [

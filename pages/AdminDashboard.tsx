@@ -5,7 +5,7 @@ import {
   Calculator, ShoppingBag, UserCheck, Package, FolderTree, 
   Wallet, Users, Palette, PanelTop, Layout, Settings, 
   Clock, Receipt, AlertCircle, TrendingUp, Printer, ShieldAlert, Cpu, CheckCircle2, XCircle, Edit, FileText, Download, Save, PhoneCall, CheckCircle, Ban, Truck, Search, Filter, Eye, Globe, Trash2, Send, ExternalLink,
-  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks, Heart, Contact, UserCog, Mail, Navigation, Star, Fingerprint, LocateFixed, MessageSquare
+  BarChart3, RefreshCw, ChevronRight, MoreHorizontal, User, MapPin, CreditCard, Hash, Check, Scissors, SearchCode, CheckSquare, Square, Menu as MenuIcon, FileEdit, Zap, ListChecks, Heart, Contact, UserCog, Mail, Navigation, Star, Fingerprint, LocateFixed, MessageSquare, Gift
 } from 'lucide-react';
 import { checkCustomerReliability } from '../courierService';
 import { dispatchToSteadfast, dispatchToPathao } from '../courierIntegrationService';
@@ -28,6 +28,7 @@ import CustomLandingBuilder from '../components/admin/CustomLandingBuilder';
 import PackagingManifest from '../components/admin/PackagingManifest';
 import DeliveryDispatch from '../components/admin/DeliveryDispatch';
 import LiveSupportModule from '../components/admin/LiveSupportModule';
+import DiscountStudio from '../components/admin/DiscountStudio';
 
 const statusMap: Record<string, { label: string, color: string, ring: string }> = {
   pending: { label: 'Pending', color: 'text-amber-600', ring: 'ring-amber-100' },
@@ -172,7 +173,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
         
         if (result.success) {
           successCount++;
-          // Progressive update to UI
           setState(prev => ({
             ...prev,
             orders: prev.orders.map(o => o.id === order.id ? { ...o, status: 'shipped' as const } : o)
@@ -217,23 +217,39 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
   };
 
   const handleConfirmLead = (lead: IncompleteOrder) => {
-    const address = lead.shippingAddress || prompt("Enter shipping address for this order:");
+    const address = lead.shippingAddress || prompt("Confirm or Enter shipping address for this recovered order:");
     if (address === null) return;
     
-    const deliveryCharge = 60;
-    const subtotal = lead.items.reduce((acc, it) => acc + (it.price * it.quantity), 0);
+    // Robust item mapping
+    const updatedItems = lead.items.map(it => {
+      const product = state.products.find(p => p.id === it.productId);
+      return {
+        productId: it.productId,
+        productName: it.productName || product?.name || 'Recovered Asset',
+        quantity: it.quantity || 1,
+        price: it.price || product?.price || 0
+      };
+    });
+
+    const subtotal = updatedItems.reduce((acc, it) => acc + (it.price * it.quantity), 0);
+    const deliveryCharge = 60; // Standard 
+    
+    const newOrderId = lead.id.startsWith('DRAFT-') 
+      ? lead.id.replace('DRAFT-', '') 
+      : 'REC-' + Math.random().toString(36).substr(2, 4).toUpperCase();
     
     const newOrder: Order = {
-      id: lead.id.replace('DRAFT-', '') || Math.random().toString(36).substr(2, 6).toUpperCase(),
+      id: newOrderId,
       customerName: lead.customerName,
       customerPhone: lead.customerPhone,
-      items: lead.items,
+      items: updatedItems,
       subtotal: subtotal,
       deliveryCharge: deliveryCharge,
       total: subtotal + deliveryCharge,
       status: 'processing',
       createdAt: new Date().toISOString(),
-      shippingAddress: address || 'No Address Provided'
+      shippingAddress: address || 'No Address Provided',
+      ipAddress: 'Lead Recovery Engine'
     };
 
     setState(prev => ({
@@ -242,7 +258,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       incompleteOrders: prev.incompleteOrders.filter(l => l.id !== lead.id)
     }));
     
-    alert("Lead confirmed and converted to Order!");
+    alert(`Success! Lead converted to Order #${newOrderId}`);
   };
 
   const handlePrintInvoice = () => {
@@ -324,6 +340,9 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
       ]},
       { label: 'Collective', roles: ['admin'], items: [
         { id: 'customers', label: 'Customer CRM', icon: Contact, count: unifiedCustomers.length },
+      ]},
+      { label: 'Marketing', roles: ['admin'], items: [
+        { id: 'recovery-popup', label: 'Exit Recovery', icon: Gift },
       ]},
       { label: 'Logistics', roles: ['admin', 'packaging'], items: [
         { id: 'packaging', label: 'Pack Manifest', icon: ListChecks },
@@ -428,6 +447,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
 
           {activeTab === 'support' && <LiveSupportModule state={state} setState={setState} />}
           {activeTab === 'dispatch' && <DeliveryDispatch state={state} setState={setState} />}
+          {activeTab === 'recovery-popup' && <DiscountStudio state={state} setState={setState} />}
           {activeTab === 'leads' && (
              <div className="space-y-10 animate-in fade-in duration-500">
                 <div className="flex justify-between items-center">
@@ -497,8 +517,8 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                                  <div className="flex justify-end gap-3">
                                     <button 
                                       onClick={() => handleConfirmLead(lead)}
-                                      title="Confirm Order"
-                                      className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center hover:bg-emerald-700 transition-all shadow-lg"
+                                      title="Confirm Recovered Order"
+                                      className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center hover:bg-emerald-700 transition-all shadow-lg active:scale-95"
                                     >
                                        <CheckCircle className="w-4 h-4"/>
                                     </button>
@@ -536,7 +556,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                  <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
                     <button onClick={() => setCustomerFilter('all')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${customerFilter === 'all' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-900'}`}>All Unified</button>
                     <button onClick={() => setCustomerFilter('purchasers')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${customerFilter === 'purchasers' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-900'}`}>Purchasers</button>
-                    <button onClick={() => setCustomerFilter('browsers')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${customerFilter === 'browsers' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-900'}`}>Accounts Only</button>
+                    <button onClick={() => setCustomerFilter('browsers')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${customerFilter === 'browsers' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-900'}`}>Accounts Only</button>
                  </div>
                  <div className="relative w-full lg:w-96">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -631,7 +651,8 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                             <th className="px-8 py-8">Reference</th>
                             <th className="px-8 py-8">Identity</th>
                             <th className="px-8 py-8">Liability</th>
-                            <th className="px-8 py-8">Execution</th>
+                            <th className="px-8 py-8">Protocol Node (IP/LOC)</th>
+                            <th className="px-8 py-8 text-right">Execution</th>
                             <th className="px-12 py-8 text-right">Control</th>
                          </tr>
                       </thead>
@@ -640,9 +661,37 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                            <tr key={o.id} className={`hover:bg-slate-50/40 transition-all group ${selectedOrderIds.includes(o.id) ? 'bg-rose-50/30' : ''}`}>
                               <td className="px-6 py-10 text-center"><button onClick={(e) => toggleSelectOrder(o.id, e)}>{selectedOrderIds.includes(o.id) ? <CheckSquare className="text-rose-600 w-5 h-5"/> : <Square className="w-5 h-5 text-slate-300"/></button></td>
                               <td className="px-8 py-10"><div><p className="text-[11px] font-black text-slate-900 tracking-tight">#{o.id}</p><p className="text-[9px] font-black text-slate-400 uppercase mt-1">{new Date(o.createdAt).toLocaleDateString()}</p></div></td>
-                              <td className="px-8 py-10"><p className="text-[13px] font-black uppercase text-slate-900">{o.customerName}</p><p className="text-[11px] font-black text-rose-600 mt-1 flex items-center gap-2 cursor-pointer"><PhoneCall className="w-3 h-3" /> {o.customerPhone}</p></td>
-                              <td className="px-8 py-10"><p className="text-xl font-black text-slate-950 tracking-tighter">{(o.total || 0).toLocaleString()}৳</p></td>
-                              <td className="px-8 py-10"><span className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] inline-flex items-center gap-2 ring-1 ${statusMap[o.status]?.color} ${statusMap[o.status]?.ring}`}>{statusMap[o.status]?.label || o.status}</span></td>
+                              <td className="px-8 py-10">
+                                <p className="text-[13px] font-black uppercase text-slate-900">{o.customerName}</p>
+                                <div className="flex items-center gap-3">
+                                  <p className="text-[11px] font-black text-rose-600 mt-1 flex items-center gap-2 cursor-pointer"><PhoneCall className="w-3 h-3" /> {o.customerPhone}</p>
+                                  {o.isDiscountApplied && <div className="flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded text-[8px] font-black text-emerald-600 uppercase border border-emerald-100">Recovery Used</div>}
+                                </div>
+                              </td>
+                              <td className="px-8 py-10">
+                                <p className="text-xl font-black text-slate-950 tracking-tighter">{(o.total || 0).toLocaleString()}৳</p>
+                                {o.isDiscountApplied && <p className="text-[9px] font-bold text-emerald-600 mt-0.5 italic">Save: {o.discountAmount?.toLocaleString()}৳</p>}
+                              </td>
+                              <td className="px-8 py-10">
+                                 <div className="flex items-center gap-4">
+                                    <div className="flex flex-col">
+                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Origin IP</span>
+                                       <span className="text-[10px] font-mono font-bold text-slate-600">{o.ipAddress || '—'}</span>
+                                    </div>
+                                    {o.location && (
+                                       <a 
+                                         href={`https://www.google.com/maps?q=${o.location.lat},${o.location.lng}`} 
+                                         target="_blank" 
+                                         rel="noopener noreferrer"
+                                         className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm group/loc"
+                                         title="View Geo-Location"
+                                       >
+                                          <MapPin className="w-4 h-4 group-hover/loc:scale-110 transition-transform" />
+                                       </a>
+                                    )}
+                                 </div>
+                              </td>
+                              <td className="px-8 py-10 text-right"><span className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] inline-flex items-center gap-2 ring-1 ${statusMap[o.status]?.color} ${statusMap[o.status]?.ring}`}>{statusMap[o.status]?.label || o.status}</span></td>
                               <td className="px-12 py-10 text-right"><button onClick={() => setSelectedOrder(o)} className="w-12 h-12 bg-white text-slate-900 border border-slate-100 rounded-2xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><Eye className="w-5 h-5"/></button></td>
                            </tr>
                          ))}
@@ -699,70 +748,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
         </div>
       </main>
 
-      {/* PRINT CONTAINERS (Hidden in UI, Shown in @media print) */}
-      <div className="hidden print:block absolute inset-0 bg-white" id="master-print-target">
-         {selectedOrder && printMode === 'invoice' && (
-             <div className="p-20 w-full text-slate-900 font-sans">
-                <div className="flex justify-between items-start mb-24 pb-12 border-b-8 border-slate-900">
-                  <div>
-                    <h1 className="text-5xl font-black italic tracking-tighter text-slate-950 uppercase">Upohar Luxe</h1>
-                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-rose-600 mt-4">High-End Gifting Infrastructure</p>
-                  </div>
-                  <div className="text-right">
-                    <h2 className="text-6xl font-black text-slate-950 tracking-tighter">OFFICIAL INVOICE</h2>
-                    <p className="text-sm font-black mt-2 uppercase text-slate-400 tracking-widest">Master ID: #{selectedOrder.id}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-24 mb-24 text-slate-900 font-bold uppercase">
-                  <div>
-                    <p className="text-[11px] font-black text-slate-400 mb-4 tracking-widest">Constituent Target</p>
-                    <p className="text-3xl font-black">{selectedOrder.customerName}</p>
-                    <p className="text-xl font-bold">{selectedOrder.customerPhone}</p>
-                    <p className="mt-6 text-base italic leading-relaxed">{selectedOrder.shippingAddress}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[11px] font-black text-slate-400 mb-4 tracking-widest">Issuance Node</p>
-                    <p className="text-xl font-black">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
-                    <p className="text-xl font-black">{new Date(selectedOrder.createdAt).toLocaleTimeString()}</p>
-                  </div>
-                </div>
-
-                <table className="w-full mb-24 border-collapse">
-                  <thead>
-                    <tr className="border-b-4 border-slate-950 text-[10px] font-black uppercase tracking-widest">
-                      <th className="py-8 text-left uppercase">Asset Classification</th>
-                      <th className="py-8 text-center uppercase">Quantity</th>
-                      <th className="py-8 text-right uppercase">Unit Liability</th>
-                      <th className="py-8 text-right uppercase">Total Liability</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y-2 divide-slate-100">
-                    {selectedOrder.items.map((item, idx) => (
-                      <tr key={idx} className="font-bold uppercase">
-                        <td className="py-10 text-lg">{state.products.find(p => p.id === item.productId)?.name || 'Premium Asset'}</td>
-                        <td className="py-10 text-center text-xl">{item.quantity}</td>
-                        <td className="py-10 text-right">{item.price.toLocaleString()}৳</td>
-                        <td className="py-10 text-right text-xl font-black">{(item.price * item.quantity).toLocaleString()}৳</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div className="flex justify-end pt-12 border-t-4 border-slate-950">
-                  <div className="text-right">
-                    <p className="text-xs font-black uppercase text-slate-400 tracking-[0.5em] mb-4">Final Settlement</p>
-                    <p className="text-7xl font-black tracking-tighter">{selectedOrder.total.toLocaleString()}৳</p>
-                  </div>
-                </div>
-
-                <div className="mt-48 text-center border-t-2 border-slate-100 pt-12">
-                   <p className="text-[9px] font-black uppercase tracking-[0.8em] text-slate-300 italic">Authenticity Guaranteed by Upohar Luxe Matrix</p>
-                </div>
-             </div>
-         )}
-      </div>
-
       {/* MODALS (Order Card) */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-0 md:p-8 overflow-hidden no-print">
@@ -776,8 +761,7 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                       <h1 className="text-2xl md:text-4xl font-black text-slate-950 tracking-tighter uppercase leading-none">Order Master Console</h1>
                       <div className="flex items-center gap-4 mt-1 md:mt-3">
                         <span className="text-[9px] md:text-[11px] font-black text-slate-400 uppercase tracking-[0.5em]">REF: #{selectedOrder.id}</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
-                        <span className="text-[9px] md:text-[11px] font-black text-rose-600 uppercase tracking-[0.5em]">{new Date(selectedOrder.createdAt).toLocaleString()}</span>
+                        {selectedOrder.isDiscountApplied && <div className="flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full text-[9px] font-black text-emerald-600 uppercase border border-emerald-100 ml-4 animate-pulse">RECOVERY PROTOCOL ACTIVE</div>}
                       </div>
                    </div>
                 </div>
@@ -799,7 +783,6 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                         </div>
                      </div>
 
-                     {/* DIGITAL METADATA SECTION */}
                      <div className="space-y-6 pt-6 border-t border-slate-50">
                         <div className="flex items-center gap-3"><Fingerprint className="w-5 h-5 text-rose-600" /><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Digital Metadata</h4></div>
                         <div className="space-y-4">
@@ -844,7 +827,8 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
                                  </div>
                               ))}
                               <div className="pt-6 flex flex-col gap-2">
-                                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500"><span>Subtotal</span><span>{(selectedOrder.total - (selectedOrder.deliveryCharge || 0)).toLocaleString()}৳</span></div>
+                                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500"><span>Subtotal</span><span>{(selectedOrder.subtotal || (selectedOrder.total - (selectedOrder.deliveryCharge || 0))).toLocaleString()}৳</span></div>
+                                 {selectedOrder.isDiscountApplied && <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-emerald-500"><span>Recovery Discount</span><span>-{selectedOrder.discountAmount?.toLocaleString()}৳</span></div>}
                                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500"><span>Logistics</span><span>+{selectedOrder.deliveryCharge?.toLocaleString()}৳</span></div>
                                  <div className="mt-4 flex justify-between items-center">
                                     <span className="text-[11px] font-black uppercase tracking-[0.3em] text-rose-500">Total Liability</span>
@@ -879,22 +863,16 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
         </div>
       )}
 
-      {/* GLOBAL PRINT CSS ENGINE */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          /* Force hide all standard UI elements */
           body * { display: none !important; }
           html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
-          
-          /* Show specifically targeted print containers */
           #master-print-target, #master-print-target *,
           .manifest-print-area, .manifest-print-area *,
           #dispatch-print-engine, #dispatch-print-engine * {
             display: block !important;
             visibility: visible !important; 
           }
-
-          /* Correct positioning for print */
           #master-print-target, .manifest-print-area, #dispatch-print-engine {
             position: absolute !important;
             left: 0 !important;
@@ -906,12 +884,8 @@ const AdminDashboard: React.FC<AdminProps> = ({ state, setState }) => {
             margin: 0 !important;
             z-index: 9999999 !important;
           }
-
-          /* Ensure table rows don't break mid-air */
           tr { page-break-inside: avoid !important; }
           table { width: 100% !important; border-collapse: collapse !important; }
-          
-          /* Specific typography for print */
           .font-black { font-weight: 900 !important; }
           .uppercase { text-transform: uppercase !important; }
         }
