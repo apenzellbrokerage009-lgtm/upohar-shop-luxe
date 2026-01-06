@@ -53,14 +53,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, cartCount, onLogout, 
       <nav className="bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 md:h-20">
-            <div className="flex items-center gap-4 lg:gap-12">
+            <div className="flex items-center gap-2 md:gap-4 lg:gap-12">
               <button className="lg:hidden p-2 text-slate-600">
                 <Menu className="w-6 h-6" />
               </button>
               <div onClick={() => onNavigate('landing')} className="cursor-pointer">
-                {(config.logoUrl || logo) ? <img src={config.logoUrl || logo} alt="Upohar Luxe" className="h-8 md:h-12 w-auto object-contain" /> : (
-                  <h1 className="text-xl md:text-2xl font-black tracking-tighter text-slate-900 flex items-center gap-2">
-                    <span className="bg-slate-900 text-white px-2 py-0.5 rounded italic">U</span>UPOHAR<span className="text-rose-600">LUXE</span>
+                {(config.logoUrl || logo) ? <img src={config.logoUrl || logo} alt="Upohar Luxe" className="h-7 md:h-12 w-auto object-contain" /> : (
+                  <h1 className="text-lg md:text-2xl font-black tracking-tighter text-slate-900 flex items-center gap-1.5 md:gap-2">
+                    <span className="bg-slate-900 text-white px-1.5 py-0.5 rounded italic">U</span>UPOHAR<span className="text-rose-600">LUXE</span>
                   </h1>
                 )}
               </div>
@@ -77,7 +77,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, cartCount, onLogout, 
               </div>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-1 md:gap-4">
               <div className="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-2 mr-2">
                 <Search className="w-4 h-4 text-slate-400" />
                 <input 
@@ -88,20 +88,27 @@ const Navbar: React.FC<NavbarProps> = ({ user, onNavigate, cartCount, onLogout, 
                 />
               </div>
               
-              <button className="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Heart className="w-5 h-5" /></button>
-              <div className="relative group p-2 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer">
+              <button className="p-1.5 md:p-2 text-slate-400 hover:text-rose-600 transition-colors"><Heart className="w-5 h-5" /></button>
+              <div className="relative group p-1.5 md:p-2 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer">
                 <ShoppingCart className="w-5 h-5" />
                 <span className="absolute top-0 right-0 bg-rose-600 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">{cartCount}</span>
               </div>
 
               {user ? (
-                <div className="flex items-center gap-2 ml-2">
+                <div className="flex items-center gap-1 md:gap-2 ml-1 md:ml-2">
                   <button onClick={() => onNavigate(user.role === 'admin' ? 'admin' : 'dashboard')} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 text-slate-900 text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50">
                     <User className="w-4 h-4" /> Account
                   </button>
                   <button onClick={onLogout} className="p-2 text-slate-400 hover:text-rose-600"><LogOut className="w-5 h-5" /></button>
                 </div>
-              ) : <button onClick={() => onNavigate('login')} className="ml-2 px-6 py-2.5 bg-slate-900 text-white rounded-full text-[11px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-all">Sign In</button>}
+              ) : (
+                <button 
+                  onClick={() => onNavigate('login')} 
+                  className="ml-1 md:ml-2 px-4 md:px-6 py-2 md:py-2.5 bg-slate-900 text-white rounded-full text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all whitespace-nowrap"
+                >
+                  Sign In
+                </button>
+              )}
             </div>
           </div>
         </div>

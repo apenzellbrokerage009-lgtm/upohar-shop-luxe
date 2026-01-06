@@ -119,8 +119,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ state, setState }) => {
                     ? 'bg-rose-600 text-white rounded-tr-none' 
                     : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                 }`}>
-                  <p className="font-medium text-[13px]">{m.text}</p>
-                  <p className={`text-[8px] mt-2 font-bold uppercase tracking-widest opacity-40 ${m.senderRole === 'customer' ? 'text-right' : 'text-left'}`}>
+                  <p className="font-bold text-[13px]">{m.text}</p>
+                  <p className={`text-[8px] mt-2 font-black uppercase tracking-widest opacity-40 ${m.senderRole === 'customer' ? 'text-right' : 'text-left'}`}>
                     {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
@@ -130,10 +130,10 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ state, setState }) => {
 
           {/* Input */}
           <div className="p-4 bg-white border-t border-slate-100 shrink-0">
-            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-100 focus-within:border-rose-300 focus-within:ring-4 focus-within:ring-rose-500/5 transition-all">
+            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-[1.5rem] border-2 border-slate-300 focus-within:border-rose-400 focus-within:ring-4 focus-within:ring-rose-500/5 transition-all shadow-inner">
               <input 
-                placeholder="Compose message..." 
-                className="flex-grow bg-transparent outline-none text-sm font-bold py-2 px-2"
+                placeholder="আপনার বার্তা লিখুন..." 
+                className="flex-grow bg-transparent outline-none text-sm font-black text-slate-950 py-2 px-3 placeholder:text-slate-500"
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend()}

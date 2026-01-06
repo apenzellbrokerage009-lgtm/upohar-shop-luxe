@@ -139,17 +139,45 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
                 </div>
               )}
 
-              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center gap-5">
+              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-200 flex items-center gap-5">
                 <img src={product.image} className="w-16 h-16 rounded-xl object-cover shadow-md" />
                 <div className="flex-grow"><h4 className="font-bold text-slate-900 text-sm leading-tight">{product.name}</h4><p className="text-xs font-medium text-slate-500">Qty: {quantity} × {product.price.toLocaleString()}৳</p></div>
               </div>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label><input required className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-rose-800/20 font-medium" placeholder="Recipient Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Mobile Number</label><input required type="tel" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-rose-800/20 font-medium" placeholder="017XXXXXXXX" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Address</label><textarea required className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-rose-800/20 h-24 resize-none font-medium text-sm" placeholder="House, Road, Area, District..." value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} /></div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Full Name</label>
+                    <input 
+                      required 
+                      className="w-full px-6 py-4 bg-white border border-slate-400 rounded-2xl outline-none focus:ring-4 focus:ring-rose-800/10 focus:border-rose-600 font-bold text-slate-950 placeholder:text-slate-400 transition-all shadow-sm" 
+                      placeholder="আপনার পূর্ণ নাম লিখুন" 
+                      value={formData.name} 
+                      onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Mobile Number</label>
+                    <input 
+                      required 
+                      type="tel" 
+                      className="w-full px-6 py-4 bg-white border border-slate-400 rounded-2xl outline-none focus:ring-4 focus:ring-rose-800/10 focus:border-rose-600 font-bold text-slate-950 placeholder:text-slate-400 transition-all shadow-sm" 
+                      placeholder="01XXXXXXXXX" 
+                      value={formData.phone} 
+                      onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Full Address</label>
+                    <textarea 
+                      required 
+                      className="w-full px-6 py-4 bg-white border border-slate-400 rounded-2xl outline-none focus:ring-4 focus:ring-rose-800/10 focus:border-rose-600 h-24 resize-none font-bold text-sm text-slate-950 placeholder:text-slate-400 transition-all shadow-sm" 
+                      placeholder="বাসা নম্বর, রোড, এলাকা ও জেলা..." 
+                      value={formData.address} 
+                      onChange={e => setFormData({ ...formData, address: e.target.value })} 
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Delivery Location</label><div className="grid grid-cols-3 gap-2">{DELIVERY_ZONES.map(zone => (<button key={zone.id} type="button" onClick={() => setSelectedZone(zone)} className={`py-3 px-2 rounded-2xl border text-[10px] font-bold uppercase transition-all flex flex-col items-center gap-1 ${selectedZone.id === zone.id ? 'bg-rose-800 text-white border-rose-800 shadow-lg shadow-rose-800/20' : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'}`}>{zone.label}<span className={`font-black ${selectedZone.id === zone.id ? 'text-white' : 'text-rose-600'}`}>৳{zone.fee}</span></button>))}</div></div>
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Delivery Location</label><div className="grid grid-cols-3 gap-2">{DELIVERY_ZONES.map(zone => (<button key={zone.id} type="button" onClick={() => setSelectedZone(zone)} className={`py-3 px-2 rounded-2xl border-2 text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1 ${selectedZone.id === zone.id ? 'bg-rose-800 text-white border-rose-800 shadow-lg shadow-rose-800/20' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>{zone.label}<span className={`font-black ${selectedZone.id === zone.id ? 'text-white' : 'text-rose-600'}`}>৳{zone.fee}</span></button>))}</div></div>
                 <div className="p-6 bg-slate-900 rounded-[2.5rem] text-white">
                   <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"><span>Subtotal</span><span>{subtotal.toLocaleString()}৳</span></div>
                   {isDiscountApplied && <div className="flex justify-between text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2"><span>Recovery Discount</span><span>-{discountAmount.toLocaleString()}৳</span></div>}
@@ -157,7 +185,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, product,
                   <div className="h-px bg-white/10 mb-4"></div>
                   <div className="flex justify-between items-end"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payable</p><p className="text-3xl font-black text-rose-500">{total.toLocaleString()}৳</p></div>
                 </div>
-                <button type="submit" className="w-full py-5 bg-rose-800 hover:bg-rose-900 text-white rounded-full font-bold text-lg shadow-2xl active:scale-[0.98] flex items-center justify-center gap-3"><CheckCircle2 className="w-5 h-5" /> Confirm Order Now</button>
+                <button type="submit" className="w-full py-5 bg-rose-800 hover:bg-rose-900 text-white rounded-full font-black text-lg shadow-2xl active:scale-[0.98] flex items-center justify-center gap-3 transition-all"><CheckCircle2 className="w-5 h-5" /> Confirm Order Now</button>
               </form>
             </div>
             <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-widest"><div className="flex items-center gap-2"><Truck className="w-4 h-4" /> Cash on Delivery</div><div className="tracking-tighter">IP: {trackingData.ip || '...'}</div></div>

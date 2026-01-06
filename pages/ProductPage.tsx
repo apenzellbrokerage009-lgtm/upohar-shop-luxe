@@ -90,9 +90,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ product, onOrderNow, onNaviga
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-col sm:flex-row items-center gap-4">
                         <div className="flex items-center bg-white border border-slate-200 rounded-full p-1.5 w-full sm:w-auto shadow-sm">
-                          <button onClick={decrement} className="w-12 h-12 flex items-center justify-center hover:bg-slate-50 rounded-full active:scale-90 transition-all"><Minus className="w-5 h-5" /></button>
+                          <button onClick={decrement} className="w-12 h-12 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-950 rounded-full active:scale-90 transition-all"><Minus className="w-5 h-5 stroke-[3px]" /></button>
                           <span className="w-14 text-center font-black text-xl text-slate-900">{quantity}</span>
-                          <button onClick={increment} className="w-12 h-12 flex items-center justify-center hover:bg-slate-50 rounded-full active:scale-90 transition-all"><Plus className="w-5 h-5" /></button>
+                          <button onClick={increment} className="w-12 h-12 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-950 rounded-full active:scale-90 transition-all"><Plus className="w-5 h-5 stroke-[3px]" /></button>
                         </div>
                         <button 
                           onClick={() => onOrderNow(product, quantity)} 
@@ -134,12 +134,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ product, onOrderNow, onNaviga
         </div>
       </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[250] bg-white/95 backdrop-blur-xl border-t border-slate-100 p-4 px-6 md:px-12 shadow-[0_-15px_50px_rgba(0,0,0,0.1)] transition-all duration-500 transform ${showStickyBar ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <div className="relative group shrink-0">
-               <img src={product.image} className="w-12 h-12 md:w-14 md:h-14 rounded-2xl object-cover shadow-lg group-hover:scale-105 transition-transform" />
-               <span className="absolute -top-2 -right-2 bg-rose-600 text-white text-[9px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-md">{quantity}</span>
+      <div className={`fixed bottom-0 left-0 right-0 z-[250] bg-white/95 backdrop-blur-xl border-t border-slate-100 p-4 px-4 md:px-12 shadow-[0_-15px_50px_rgba(0,0,0,0.1)] transition-all duration-500 transform ${showStickyBar ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-4">
+          <div className="flex items-center gap-3 md:gap-6">
+            <div className="relative group shrink-0 hidden xs:block">
+               <img src={product.image} className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl object-cover shadow-lg" />
             </div>
             <div className="hidden sm:block">
               <h4 className="font-black text-slate-900 text-sm uppercase tracking-tight line-clamp-1">{product.name}</h4>
@@ -147,11 +146,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ product, onOrderNow, onNaviga
             </div>
           </div>
           
-          <div className="flex items-center gap-3 flex-grow justify-end">
-            <div className="hidden md:flex items-center bg-slate-50 border border-slate-200 rounded-full p-1 shadow-sm">
-              <button onClick={decrement} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-full transition-all active:scale-90"><Minus className="w-3.5 h-3.5" /></button>
-              <span className="w-8 text-center font-black text-sm">{quantity}</span>
-              <button onClick={increment} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-full transition-all active:scale-90"><Plus className="w-3.5 h-3.5" /></button>
+          <div className="flex items-center gap-2 md:gap-3 flex-grow justify-end">
+            <div className="flex items-center bg-slate-100 border border-slate-200 rounded-full p-1 shadow-sm">
+              <button onClick={decrement} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-white text-slate-950 rounded-full transition-all active:scale-90"><Minus className="w-3.5 h-3.5 md:w-4 md:h-4 stroke-[3px]" /></button>
+              <span className="w-6 md:w-10 text-center font-black text-xs md:text-sm text-slate-900">{quantity}</span>
+              <button onClick={increment} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-white text-slate-950 rounded-full transition-all active:scale-90"><Plus className="w-3.5 h-3.5 md:w-4 md:h-4 stroke-[3px]" /></button>
             </div>
             
             <button 
@@ -159,7 +158,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ product, onOrderNow, onNaviga
               className="p-3 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-all shadow-lg active:scale-95 md:hidden"
               title="Order on WhatsApp"
             >
-              <MessageCircle className="w-6 h-6" />
+              <MessageCircle className="w-5 h-5" />
             </button>
             
             <button 
@@ -171,9 +170,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ product, onOrderNow, onNaviga
 
             <button 
               onClick={() => onOrderNow(product, quantity)} 
-              className="px-8 md:px-12 py-4 md:py-5 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-black uppercase text-[10px] md:text-xs tracking-widest shadow-2xl flex items-center gap-3 transition-all active:scale-95"
+              className="px-6 md:px-12 py-4 md:py-5 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-black uppercase text-[10px] md:text-xs tracking-widest shadow-2xl flex items-center gap-3 transition-all active:scale-95 flex-grow sm:flex-grow-0"
             >
-              <ShoppingBag className="w-5 h-5" /> <span className="hidden sm:inline">Order Now</span> <span className="sm:hidden">Buy</span>
+              <ShoppingBag className="w-4 h-4 md:w-5 md:h-5" /> <span className="hidden sm:inline">Order Now</span> <span className="sm:hidden">Buy</span>
             </button>
           </div>
         </div>
